@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/coverprice/contentscraper/backingstore"
 	"github.com/coverprice/contentscraper/config"
+	"github.com/coverprice/contentscraper/drivers"
 	"github.com/coverprice/contentscraper/scrapers"
-	"github.com/coverprice/contentscraper/scrapers/runner"
 	//"github.com/davecgh/go-spew/spew"
 )
 
@@ -35,7 +35,7 @@ func main() {
 	defer shutdown()
 
 	reddit_scraper_runner := scrapers.Get("reddit")
-	parambag := runner.ParamBag{
+	parambag := drivers.ParamBag{
 		"subreddit": "funny",
 	}
 	err := reddit_scraper_runner.Run(parambag)

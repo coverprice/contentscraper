@@ -1,8 +1,8 @@
-package redditbot
+package reddit
 
 import (
 	"fmt"
-	"github.com/coverprice/contentscraper/scrapers/runner"
+	"github.com/coverprice/contentscraper/drivers"
 	"github.com/turnage/graw/reddit"
 )
 
@@ -32,8 +32,8 @@ func NewScraper(clientid, clientsecret, username, password string) (scraper Scra
 	return
 }
 
-// Implements runner.IScraper
-func (s *Scraper) Scrape(paramBag runner.ParamBag) ([]runner.IPost, error) {
+// Implements drivers.IScraper
+func (s *Scraper) Scrape(paramBag drivers.ParamBag) ([]drivers.IPost, error) {
 	var subreddit_name, ok = paramBag["subreddit"]
 	if !ok {
 		panic("ParamBag must contain a 'subreddit' parameter")
@@ -41,7 +41,7 @@ func (s *Scraper) Scrape(paramBag runner.ParamBag) ([]runner.IPost, error) {
 
 	var url_path = fmt.Sprintf("/r/%s", subreddit_name)
 
-	var posts = make([]runner.IPost, 0)
+	var posts = make([]drivers.IPost, 0)
 	harvest, err := s.bot.Listing(url_path, "")
 	if err != nil {
 		return posts, fmt.Errorf("Failed to fetch listing for subreddit '%s': %v", subreddit_name, err)

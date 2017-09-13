@@ -1,4 +1,4 @@
-package redditbot
+package reddit
 
 import (
 	"fmt"

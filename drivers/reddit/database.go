@@ -1,8 +1,8 @@
-package redditbot
+package reddit
 
 import (
 	"github.com/coverprice/contentscraper/backingstore"
-	"github.com/coverprice/contentscraper/scrapers/runner"
+	"github.com/coverprice/contentscraper/drivers"
 )
 
 type DataStore struct {
@@ -44,7 +44,7 @@ func (s *DataStore) initTables() (err error) {
 	return
 }
 
-func (s *DataStore) StorePost(rpost *runner.IPost) (err error) {
+func (s *DataStore) StorePost(rpost *drivers.IPost) (err error) {
 	post := (*rpost).(RedditPost)
 	err = s.dbconn.ExecSql(`
         INSERT OR REPLACE INTO redditpost
