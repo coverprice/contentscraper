@@ -2,78 +2,47 @@ package redditbot
 
 import (
 	"fmt"
-	"github.com/coverprice/contentscraper/backingstore"
-	"github.com/coverprice/contentscraper/config"
-	"github.com/mitchellh/mapstructure"
+	"github.com/coverprice/contentscraper/scrapers/runner"
 	"github.com/turnage/graw/reddit"
 )
 
-type RedditPost struct {
-	Id            string
-	RawId         string
-	Permalink     string
-	TimeCreated   uint64 `mapstructure:"time_created"`
-	TimeUpdated   uint64 `mapstructure:"time_updated"`
-	IsActive      bool
-	IsSticky      bool
-	Score         int64
-	Title         string
-	Url           string
-	SubredditName string `mapstructure:"subreddit_name"`
-	SubredditId   string `mapstructure:"subreddit_id"`
-}
-
-func redditPostFromBotPost(bp *reddit.Post) (p RedditPost) {
-	p.Id = fmt.Sprintf("%s/%s", bp.ID, bp.Subreddit)
-	p.RawId = bp.ID
-	p.Permalink = bp.Permalink
-	p.TimeCreated = bp.CreatedUTC
-	p.TimeUpdated = bp.CreatedUTC
-	p.IsActive = !bp.Deleted
-	p.IsSticky = bp.Stickied
-	p.Score = int64(bp.Score)
-	p.Title = bp.Title
-	p.Url = bp.URL
-	p.SubredditName = bp.Subreddit
-	p.SubredditId = bp.SubredditID
-	return
-}
-
-func MakeScraper(conf *config.Config) (scraper Scraper, err error) {
-	if scraper.Bot, err = makeBot(conf); err != nil {
-		return
-	}
-	if scraper.DbConn, err = makeDbConn(conf); err != nil {
-		return
-	}
-	return
-}
+const (
+	useragent = "Fedora:github.com/coverprice/contentscraper:0.1.0 (by /u/jayzefrashe)"
+)
 
 type Scraper struct {
-	reddit.Bot
-	*backingstore.DbConn
+	bot reddit.Bot
 }
 
-func (s *Scraper) QuerySql(sql string, params ...interface{}) (posts []RedditPost, err error) {
-	var rows backingstore.MultiRowResult
-	if rows, err = s.DbConn.GetAllRows(sql, params...); err != nil {
-		return nil, err
+func NewScraper(clientid, clientsecret, username, password string) (scraper Scraper, err error) {
+	cfg := reddit.BotConfig{
+		Agent: useragent,
+		App: reddit.App{
+			ID:       clientid,
+			Secret:   clientsecret,
+			Username: username,
+			Password: password,
+		},
 	}
-	for _, row := range rows {
-		var reddit_post RedditPost
-		err = mapstructure.Decode(row, &reddit_post)
-		if err != nil {
-			panic(err)
-		}
-		posts = append(posts, reddit_post)
+
+	if scraper.bot, err = reddit.NewBot(cfg); err != nil {
+		err = fmt.Errorf("Could not create reddit bot: %v", err)
+		return
 	}
 	return
 }
 
-func (s *Scraper) GetPosts(subreddit_name string) (posts []RedditPost, err error) {
-	subreddit_name = fmt.Sprintf("/r/%s", subreddit_name)
+// Implements runner.IScraper
+func (s *Scraper) Scrape(paramBag runner.ParamBag) ([]runner.IPost, error) {
+	var subreddit_name, ok = paramBag["subreddit"]
+	if !ok {
+		panic("ParamBag must contain a 'subreddit' parameter")
+	}
 
-	harvest, err := s.Bot.Listing(subreddit_name, "")
+	var url_path = fmt.Sprintf("/r/%s", subreddit_name)
+
+	var posts = make([]runner.IPost, 0)
+	harvest, err := s.bot.Listing(url_path, "")
 	if err != nil {
 		return posts, fmt.Errorf("Failed to fetch listing for subreddit '%s': %v", subreddit_name, err)
 	}
@@ -82,5 +51,5 @@ func (s *Scraper) GetPosts(subreddit_name string) (posts []RedditPost, err error
 		reddit_post := redditPostFromBotPost(botpost)
 		posts = append(posts, reddit_post)
 	}
-	return
+	return posts, nil
 }

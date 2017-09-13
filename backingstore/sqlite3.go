@@ -2,27 +2,15 @@ package backingstore
 
 import (
 	"fmt"
+	// "github.com/davecgh/go-spew/spew"
 	"github.com/mxk/go-sqlite/sqlite3"
 	"io"
 )
 
-type DbConn struct {
-	conn *sqlite3.Conn
-}
-
 type MultiRowResult []sqlite3.RowMap
 
-func GetConnection(dbfilepath string) (conn *DbConn, err error) {
-	if dbfilepath == "" {
-		panic("Database filename is empty")
-	}
-
-	var sqlite_conn *sqlite3.Conn
-	if sqlite_conn, err = sqlite3.Open(dbfilepath); err != nil {
-		return
-	}
-	conn = &DbConn{conn: sqlite_conn}
-	return
+type DbConn struct {
+	conn *sqlite3.Conn
 }
 
 func (conn *DbConn) Close() (err error) {
@@ -42,6 +30,7 @@ func (conn *DbConn) ExecSql(sql string, params ...interface{}) (err error) {
 	var args sqlite3.NamedArgs
 	var ok bool
 	if len(params) == 1 {
+		fmt.Println("Only 1 param")
 		_, ok := params[0].(sqlite3.NamedArgs)
 		if ok {
 			args = params[0].(sqlite3.NamedArgs)
@@ -94,7 +83,7 @@ func OrderedParamsToArgs(params ...interface{}) (args sqlite3.NamedArgs) {
 	args = make(sqlite3.NamedArgs)
 	var arg_name = 'a'
 	for _, val := range params {
-		args[fmt.Sprintf("$%s", arg_name)] = val
+		args[fmt.Sprintf("$%c", arg_name)] = val
 		if arg_name == 'z' {
 			arg_name = 'A'
 		} else if arg_name >= 'Z' && arg_name < 'a' {

@@ -3,10 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/coverprice/contentscraper/backingstore"
 	"github.com/coverprice/contentscraper/config"
 	"github.com/coverprice/contentscraper/scrapers"
-	"github.com/coverprice/contentscraper/scrapers/redditbot"
-	"github.com/davecgh/go-spew/spew"
+	"github.com/coverprice/contentscraper/scrapers/runner"
+	//"github.com/davecgh/go-spew/spew"
 )
 
 var conf config.Config
@@ -17,22 +18,29 @@ func initialize() {
 	if err != nil {
 		panic(fmt.Errorf("Could not load/parse config file: %v", err))
 	}
+
+	backingstore.Initialize(conf.BackendStorePath)
+
 	if err = scrapers.Initialize(conf); err != nil {
 		panic(fmt.Errorf("Could not initialize scrapers: %v", err))
 	}
 }
 
+func shutdown() {
+	backingstore.Shutdown()
+}
+
 func main() {
 	initialize()
+	defer shutdown()
 
-	reddit_scraper := scrapers.Get("reddit").(redditbot.Scraper)
-
-	posts, err := reddit_scraper.GetPosts("funny")
+	reddit_scraper_runner := scrapers.Get("reddit")
+	parambag := runner.ParamBag{
+		"subreddit": "funny",
+	}
+	err := reddit_scraper_runner.Run(parambag)
 	if err != nil {
 		panic(err)
 	}
-
-	for _, post := range posts {
-		fmt.Println(spew.Sdump(post))
-	}
+	//fmt.Println(spew.Sdump(post))
 }
