@@ -1,25 +1,27 @@
 package config
 
 import (
-	"testing"
+	"path/filepath"
 	"reflect"
+	"testing"
 )
 
 func TestConfigParsing(t *testing.T) {
 	expected := &Config{
 		Reddit_secrets: RedditSecrets{
-			ClientId: "some_client_id",
+			ClientId:     "some_client_id",
 			ClientSecret: "some_client_secret",
-			Username: "some_reddit_user",
-			Password: "some_password",
+			Username:     "some_reddit_user",
+			Password:     "some_password",
 		},
 		Subreddits: []string{
 			"reddit1",
 			"reddit2",
 		},
+		BackendStorePath: filepath.Join(storageDir, databaseFileName),
 	}
 
-	conf, err := parseFromString(testConfig)
+	conf, err := GetTestConfig()
 	if err != nil {
 		t.Error(err)
 	}
@@ -28,15 +30,3 @@ func TestConfigParsing(t *testing.T) {
 		t.Error("Config structure differed from expectation")
 	}
 }
-
-const testConfig = `
-redditsecrets:
-    clientid: "some_client_id"
-    clientsecret: "some_client_secret"
-    username: "some_reddit_user"
-    password: "some_password"
-
-subreddits:
-- "reddit1"
-- "reddit2"
-`

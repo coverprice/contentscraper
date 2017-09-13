@@ -3,6 +3,7 @@
 *.dll
 *.so
 *.dylib
+contentscraper
 
 # Test binary, build with `go test -c`
 *.test
