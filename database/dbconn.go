@@ -1,4 +1,4 @@
-package backingstore
+package database
 
 import (
 	"fmt"
@@ -7,7 +7,8 @@ import (
 	"io"
 )
 
-type MultiRowResult []sqlite3.RowMap
+type Row sqlite3.RowMap
+type MultiRowResult []Row
 
 type DbConn struct {
 	conn *sqlite3.Conn
@@ -43,7 +44,7 @@ func (conn *DbConn) ExecSql(sql string, params ...interface{}) (err error) {
 	return
 }
 
-func (conn *DbConn) GetFirstRow(sql string, params ...interface{}) (row *sqlite3.RowMap, err error) {
+func (conn *DbConn) GetFirstRow(sql string, params ...interface{}) (row *Row, err error) {
 	var stmt *sqlite3.Stmt
 	stmt, err = conn.conn.Query(sql, params...)
 	if err == io.EOF {
@@ -52,7 +53,7 @@ func (conn *DbConn) GetFirstRow(sql string, params ...interface{}) (row *sqlite3
 	} else if err != nil {
 		return nil, err
 	}
-	return_row := make(sqlite3.RowMap)
+	return_row := make(Row)
 	if err = stmt.Scan(return_row); err != nil {
 		return nil, err
 	}
@@ -70,7 +71,7 @@ func (conn *DbConn) GetAllRows(sql string, params ...interface{}) (result MultiR
 		return result, err
 	}
 	for ; err == nil; err = stmt.Next() {
-		return_row := make(sqlite3.RowMap)
+		return_row := make(Row)
 		if err = stmt.Scan(return_row); err != nil {
 			return
 		}

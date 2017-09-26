@@ -1,7 +1,8 @@
-package backingstore
+package database
 
 import (
 	"fmt"
+	"github.com/coverprice/contentscraper/toolbox"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/mxk/go-sqlite/sqlite3"
 	"io/ioutil"
@@ -62,7 +63,7 @@ func verifyRowTypes(t *testing.T, conn *DbConn) {
 }
 
 func TestCanConnect(t *testing.T) {
-	dirpath := initTestDb(t)
+	dirpath := toolbox.InitTestDb(t)
 	defer os.RemoveAll(dirpath)
 	defer Shutdown()
 

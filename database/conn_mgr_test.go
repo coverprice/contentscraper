@@ -1,4 +1,4 @@
-package backingstore
+package database
 
 import (
 	"os"

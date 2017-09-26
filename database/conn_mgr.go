@@ -1,4 +1,4 @@
-package backingstore
+package database
 
 import (
 	"github.com/mxk/go-sqlite/sqlite3"
@@ -29,4 +29,5 @@ func Shutdown() {
 	for _, conn := range connections {
 		conn.Close()
 	}
+	connections = []*DbConn{}
 }
