@@ -15,6 +15,9 @@ reddit:
     feeds:
         - name: "foo"
           description: "foo foo"
+          media: "image"
+          percentile: 87.0
+          max_daily_posts: 103
           subreddits:
             - name: "subreddit1"
               percentile: 80.0
@@ -24,10 +27,15 @@ reddit:
               max_daily_posts: 73 
         - name: "bar"
           description: "bar bar"
+          media: "text"
+          percentile: 85.0
           subreddits:
             - name: "subreddit3"
               percentile: 70.0
               max_daily_posts: 22
+            - name: "subreddit4"
+            - name: "subreddit5"
+              percentile: 72.0
 
 twitter:
     secrets:

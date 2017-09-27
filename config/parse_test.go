@@ -18,8 +18,11 @@ func TestConfigParsing(t *testing.T) {
 			},
 			Feeds: []RedditFeed{
 				RedditFeed{
-					Name:        "foo",
-					Description: "foo foo",
+					Name:                 "foo",
+					Description:          "foo foo",
+					Media:                "image",
+					DefaultPercentile:    87.0,
+					DefaultMaxDailyPosts: 103,
 					Subreddits: []Subreddit{
 						Subreddit{
 							Name:          "subreddit1",
@@ -34,13 +37,28 @@ func TestConfigParsing(t *testing.T) {
 					},
 				},
 				RedditFeed{
-					Name:        "bar",
-					Description: "bar bar",
+					Name:                 "bar",
+					Description:          "bar bar",
+					Media:                "text",
+					DefaultPercentile:    85.0,
+					DefaultMaxDailyPosts: 100, // The global default
 					Subreddits: []Subreddit{
 						Subreddit{
 							Name:          "subreddit3",
 							Percentile:    70.0,
 							MaxDailyPosts: 22,
+						},
+						Subreddit{
+							Name: "subreddit4",
+							// Percentile + MaxDailyPosts inherited from Feed default
+							Percentile:    85.0,
+							MaxDailyPosts: 100,
+						},
+						Subreddit{
+							Name:       "subreddit5",
+							Percentile: 72.0,
+							// MaxDailyPosts inherited from Feed default
+							MaxDailyPosts: 100,
 						},
 					},
 				},
@@ -83,6 +101,6 @@ func TestConfigParsing(t *testing.T) {
 		t.Error("Did not validate", err)
 	}
 	if !reflect.DeepEqual(conf, expected) {
-		t.Error("Config structure differed from expectation", spew.Sdump(conf), spew.Sdump(expected))
+		t.Error("Config structure differed from expectation: (actual, expected)\n", spew.Sdump(conf), spew.Sdump(expected))
 	}
 }

@@ -30,7 +30,7 @@ func initialize() (err error) {
 
 	var conf *config.Config
 
-	if conf, err = config.GetConfigFromFile(); err != nil {
+	if conf, err = config.GetConfig(); err != nil {
 		return fmt.Errorf("Could not load/parse config file: %v", err)
 	}
 

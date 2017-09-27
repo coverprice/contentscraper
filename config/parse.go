@@ -5,6 +5,7 @@ import (
 	//"github.com/davecgh/go-spew/spew"
 	"github.com/ghodss/yaml"
 	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 	"path/filepath"
 )
 
@@ -27,15 +28,44 @@ type RedditSecrets struct {
 }
 
 type RedditFeed struct {
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	Subreddits  []Subreddit `json:"subreddits"`
+	Name                 string      `json:"name"`
+	Description          string      `json:"description"`
+	Media                string      `json:"media"`
+	Subreddits           []Subreddit `json:"subreddits"`
+	DefaultPercentile    float64     `json:"percentile"`
+	DefaultMaxDailyPosts int         `json:"max_daily_posts"`
+}
+
+func (this RedditFeed) Validate() (err error) {
+	if this.Name == "" {
+		return fmt.Errorf("Empty feed name")
+	}
+	if this.Description == "" {
+		return fmt.Errorf("Empty feed description")
+	}
+	if !(this.Media == "image" || this.Media == "text") {
+		return fmt.Errorf("Invalid media type: '%s', must be one of 'image' or 'text'", this.Media)
+	}
+	return nil
 }
 
 type Subreddit struct {
 	Name          string  `json:"name"`
 	Percentile    float64 `json:"percentile"`
 	MaxDailyPosts int     `json:"max_daily_posts"`
+}
+
+func (this Subreddit) Validate() (err error) {
+	if this.Name == "" {
+		return fmt.Errorf("Empty subreddit name")
+	}
+	if this.Percentile < 0.0 || this.Percentile > 100.0 {
+		return fmt.Errorf("Percentile out of 0-100 range. : %f", this.Percentile)
+	}
+	if this.MaxDailyPosts < 0 {
+		return fmt.Errorf("MaxDailyPosts must be a +ve integer. : %d", this.MaxDailyPosts)
+	}
+	return nil
 }
 
 type TwitterConfig struct {
@@ -53,6 +83,16 @@ type TwitterFeed struct {
 	Filters     []TwitterFilter `json:"filters"`
 }
 
+func (this TwitterFeed) Validate() (err error) {
+	if this.Name == "" {
+		return fmt.Errorf("Empty feed name")
+	}
+	if this.Description == "" {
+		return fmt.Errorf("Empty feed description")
+	}
+	return nil
+}
+
 type TwitterFilter struct {
 	AccountName   string  `json:"account"`
 	FilterType    string  `json:"filtertype"`
@@ -66,6 +106,12 @@ func (this TwitterFilter) Validate() (err error) {
 	}
 	if !(this.FilterType == "original" || this.FilterType == "retweets") {
 		return fmt.Errorf("Invalid filter type: '%s'", this.FilterType)
+	}
+	if this.Percentile < 0.0 || this.Percentile > 100.0 {
+		return fmt.Errorf("Percentile out of 0-100 range: %f", this.Percentile)
+	}
+	if this.MaxDailyPosts < 0 {
+		return fmt.Errorf("MaxDailyPosts must be a +ve integer: %d", this.MaxDailyPosts)
 	}
 	return nil
 }
@@ -81,11 +127,8 @@ func (this *Config) Validate() (err error) {
 	for idx, redditFeed := range this.Reddit.Feeds {
 		var feedname = redditFeed.Name
 		var feederr_template = fmt.Sprintf("Problem in Reddit feed '%s', index %d ", feedname, idx+1)
-		if redditFeed.Name == "" {
-			return fmt.Errorf("%s: Empty feed name", feederr_template)
-		}
-		if redditFeed.Description == "" {
-			return fmt.Errorf("%s: Empty feed description", feederr_template)
+		if err := redditFeed.Validate(); err != nil {
+			return fmt.Errorf("%s: %s", feederr_template, err)
 		}
 		if _, is_present := feednames[feedname]; is_present {
 			return fmt.Errorf("%s: Duplicate name detected. Feed names must be globally unique.", feederr_template)
@@ -94,46 +137,29 @@ func (this *Config) Validate() (err error) {
 
 		for sub_idx, subreddit := range redditFeed.Subreddits {
 			var subredditerr_template = fmt.Sprintf("%s, subreddit: '%s' (index %d) ", feederr_template, subreddit.Name, sub_idx+1)
-			if subreddit.Name == "" {
-				return fmt.Errorf("%s: Empty subreddit name", subredditerr_template)
+			if err := subreddit.Validate(); err != nil {
+				return fmt.Errorf("%s: %s", subredditerr_template, err)
 			}
 			if _, is_present := subredditnames[subreddit.Name]; is_present {
 				return fmt.Errorf("%s: Duplicate subreddit name. Subreddits must be unique across feeds.", subredditerr_template)
-			}
-			if subreddit.Percentile < 0.0 || subreddit.Percentile > 100.0 {
-				return fmt.Errorf("%s: Percentile out of 0-100 range. : %f", subredditerr_template, subreddit.Percentile)
-			}
-			if subreddit.MaxDailyPosts < 0 {
-				return fmt.Errorf("%s: MaxDailyPosts must be a +ve integer. : %d", subredditerr_template, subreddit.MaxDailyPosts)
 			}
 		}
 	}
 
 	for idx, twitterFeed := range this.Twitter.Feeds {
-		var feedname = twitterFeed.Name
-		var feederr_template = fmt.Sprintf("Problem in Twitter feed #%d ", idx+1)
-		if twitterFeed.Name == "" {
-			return fmt.Errorf("%s: Empty feed name", feederr_template)
+		var feederr_template = fmt.Sprintf("Problem in Twitter feed #%d, name: '%s' ", idx+1, twitterFeed.Name)
+		if err := twitterFeed.Validate(); err != nil {
+			return fmt.Errorf("%s: %s", feederr_template, err)
 		}
-		if twitterFeed.Description == "" {
-			return fmt.Errorf("%s: Empty feed description", feederr_template)
-		}
-		feederr_template = fmt.Sprintf("%s, name: '%s' ", feederr_template, feedname)
-		if _, is_present := feednames[feedname]; is_present {
+		if _, is_present := feednames[twitterFeed.Name]; is_present {
 			return fmt.Errorf("%s: Duplicate name detected. Feed names must be globally unique.", feederr_template)
 		}
-		feednames[feedname] = true
+		feednames[twitterFeed.Name] = true
 
 		for sub_idx, twitterFilter := range twitterFeed.Filters {
 			var filtererr_template = fmt.Sprintf("%s, filter index %d ", feederr_template, sub_idx+1)
 			if err := twitterFilter.Validate(); err != nil {
 				return fmt.Errorf("%s: %s", filtererr_template, err)
-			}
-			if twitterFilter.Percentile < 0.0 || twitterFilter.Percentile > 100.0 {
-				return fmt.Errorf("%s: Percentile out of 0-100 range. : %f", filtererr_template, twitterFilter.Percentile)
-			}
-			if twitterFilter.MaxDailyPosts < 0 {
-				return fmt.Errorf("%s: MaxDailyPosts must be a +ve integer. : %d", filtererr_template, twitterFilter.MaxDailyPosts)
 			}
 		}
 	}
@@ -155,18 +181,53 @@ func parseFromString(configblob string) (conf *Config, err error) {
 		return
 	}
 
+	// Populate defaults
+	for idx, redditfeed := range conf.Reddit.Feeds {
+		if redditfeed.DefaultPercentile == 0 {
+			conf.Reddit.Feeds[idx].DefaultPercentile = float64(defaultPercentile)
+		}
+		// Due to the way the Unmarshaller works, we can't differentiate between the config file specifying
+		// [Default]MaxDailyPosts = 0 vs not specifying anything at all. So the convention is that if the user
+		// wants [Default]MaxDailyPosts to be 0, then they should specify a negative number.
+		if redditfeed.DefaultMaxDailyPosts < 0 {
+			conf.Reddit.Feeds[idx].DefaultMaxDailyPosts = 0
+		} else if redditfeed.DefaultMaxDailyPosts == 0 {
+			conf.Reddit.Feeds[idx].DefaultMaxDailyPosts = defaultMaxDailyPosts
+		}
+		for subidx, subreddit := range redditfeed.Subreddits {
+			if subreddit.Percentile == 0 {
+				conf.Reddit.Feeds[idx].Subreddits[subidx].Percentile = conf.Reddit.Feeds[idx].DefaultPercentile
+			}
+			// See above.
+			if subreddit.MaxDailyPosts < 0 {
+				conf.Reddit.Feeds[idx].Subreddits[subidx].MaxDailyPosts = 0
+			} else if subreddit.MaxDailyPosts == 0 {
+				conf.Reddit.Feeds[idx].Subreddits[subidx].MaxDailyPosts = conf.Reddit.Feeds[idx].DefaultMaxDailyPosts
+			}
+		}
+	}
+
+	if err = conf.Validate(); err != nil {
+		return
+	}
+
 	// log.Fatal(spew.Sdump(conf))
 	return
 }
 
-func GetConfigFromFile() (conf *Config, err error) {
-	var configFilePath, configFileContents string
-	if configFilePath, configFileContents, err = readFile(); err != nil {
-		return nil, fmt.Errorf("Could not read config file: %v", err)
+func GetConfig() (conf *Config, err error) {
+	configFilePath, err := locateConfigFile()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to locate config file: %v", err)
 	}
 
-	if conf, err = parseFromString(configFileContents); err != nil {
-		return nil, fmt.Errorf("Could not parse config file %s : %v", configFilePath, err)
+	var raw_contents []byte
+	if raw_contents, err = ioutil.ReadFile(configFilePath); err != nil {
+		return nil, fmt.Errorf("Failed to read config file: %v", err)
+	}
+	var contents = string(raw_contents)
+	if conf, err = parseFromString(contents); err != nil {
+		return nil, fmt.Errorf("Failed to parse config file: %v", err)
 	}
 	return
 }

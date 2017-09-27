@@ -12,7 +12,7 @@ func initTestScraper(t *testing.T) *Scraper {
 	var conf *config.Config
 	var err error
 
-	if conf, err = config.GetConfigFromFile(); err != nil {
+	if conf, err = config.GetConfig(); err != nil {
 		t.Error("Could not load/parse config file: %v", err)
 	}
 
