@@ -4,6 +4,7 @@ import (
 	"github.com/coverprice/contentscraper/config"
 	"github.com/coverprice/contentscraper/database"
 	"github.com/coverprice/contentscraper/drivers"
+	harvest "github.com/coverprice/contentscraper/drivers/reddit/harvester"
 	persist "github.com/coverprice/contentscraper/drivers/reddit/persistence"
 	scrape "github.com/coverprice/contentscraper/drivers/reddit/scraper"
 	"github.com/coverprice/contentscraper/drivers/reddit/types"
@@ -14,7 +15,7 @@ var _ drivers.IDriver = &RedditDriver{}
 
 // Implements drivers.IDriver
 type RedditDriver struct {
-	harvester *Harvester
+	harvester *harvest.Harvester
 	//editor      *Editor
 }
 
@@ -33,8 +34,8 @@ func NewRedditDriver(
 		return
 	}
 
-	var harvester *Harvester
-	harvester, err = NewHarvester(
+	var harvester *harvest.Harvester
+	harvester, err = harvest.NewHarvester(
 		scraper,
 		persistence,
 		sourceLastRunService,

@@ -9,10 +9,8 @@ import (
 	"time"
 )
 
-const (
-	// bakingTime_s is how long we leave posts to give them time to get a score.
-	bakingTime_s = 1 * 24 * 60 * 60
-)
+// bakingTime_s is how long we leave posts to give them time to get a score.
+var bakingTime_s = uint64(1 * 24 * 60 * 60)
 
 // --------------------------------------
 

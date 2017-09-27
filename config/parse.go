@@ -8,50 +8,6 @@ import (
 	"path/filepath"
 )
 
-const testConfig = `
-reddit:
-    secrets:
-        clientid: "some_client_id"
-        clientsecret: "some_client_secret"
-        username: "some_reddit_user"
-        password: "some_password"
-
-    feeds:
-        - name: "foo"
-          description: "foo foo"
-          subreddits:
-            - name: "subreddit1"
-              percentile: 80.0
-              max_daily_posts: 100
-            - name: "subreddit2"
-              percentile: 90
-              max_daily_posts: 73 
-        - name: "bar"
-          description: "bar bar"
-          subreddits:
-            - name: "subreddit3"
-              percentile: 70.0
-              max_daily_posts: 22
-
-twitter:
-    secrets:
-        clientsecret: "twitterapikey"
-    feeds:
-        - name: "news"
-          description: "news tweets"
-          filters:
-            - account: "mhaberman"
-              filtertype: "original"
-              percentile: 70.0
-              max_daily_posts: 22
-            - account: "mhaberman"
-              filtertype: "retweets"
-              percentile: 50.0
-              max_daily_posts: 44
-`
-
-// -----------------------------
-
 type Config struct {
 	Reddit           RedditConfig  `json:"reddit"`
 	Twitter          TwitterConfig `json:"twitter"`
@@ -211,13 +167,6 @@ func GetConfigFromFile() (conf *Config, err error) {
 
 	if conf, err = parseFromString(configFileContents); err != nil {
 		return nil, fmt.Errorf("Could not parse config file %s : %v", configFilePath, err)
-	}
-	return
-}
-
-func GetTestConfig() (conf *Config, err error) {
-	if conf, err = parseFromString(testConfig); err != nil {
-		return nil, fmt.Errorf("Could not parse fake config file: %v", err)
 	}
 	return
 }

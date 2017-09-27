@@ -18,6 +18,9 @@ type SourceLastRun struct {
 
 type SourceLastRunService struct {
 	dbconn *database.DbConn
+	// The # of seconds prior to now that
+	// a missing "Last Run" record is presumed to be.
+	DefaultLastRunInterval_s uint64
 }
 
 func NewSourceLastRunService(
@@ -25,6 +28,7 @@ func NewSourceLastRunService(
 ) (sourceLastRunService *SourceLastRunService, err error) {
 	sourceLastRunService = &SourceLastRunService{
 		dbconn: dbconn,
+		DefaultLastRunInterval_s: uint64(7 * 24 * 60 * 60),
 	}
 	if err = sourceLastRunService.initTables(); err != nil {
 		return nil, err
@@ -72,7 +76,7 @@ func (this *SourceLastRunService) GetSourceLastRunFromId(
 	if lastRun.DateLastRun == 0 {
 		// No row (or the value was 0), so fill in a default value
 		// TODO: make the default value configurable at runtime.
-		lastRun.DateLastRun = uint64(time.Now().Unix()) - 7*24*60*60
+		lastRun.DateLastRun = uint64(time.Now().Unix()) - this.DefaultLastRunInterval_s
 	}
 	return lastRun, nil
 }
