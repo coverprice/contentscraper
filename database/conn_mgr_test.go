@@ -6,7 +6,7 @@ import (
 
 // Tests whether the automatic closure works
 func TestDbConn(t *testing.T) {
-	testDb := NewTestDatabase(t)
+	testDb := InitTestDb(t)
 	defer testDb.Cleanup()
 
 	var err error

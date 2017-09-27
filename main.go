@@ -7,26 +7,36 @@ import (
 	"github.com/coverprice/contentscraper/database"
 	"github.com/coverprice/contentscraper/drivers"
 	"github.com/coverprice/contentscraper/drivers/reddit"
+	"github.com/coverprice/contentscraper/server"
 	//"github.com/davecgh/go-spew/spew"
 	log "github.com/sirupsen/logrus"
 	"sync"
 	"time"
 )
 
-var waitgroup sync.WaitGroup
-var sourceDrivers []drivers.IDriver
-var quitChannels []chan bool
-var harvestInterval = flag.Int("harvest-interval", 60, "Minutes to wait between harvest runs")
-var logLevel = flag.String("log-level", "INFO", "One of DEBUG, INFO, WARN, ERROR, FATAL, PANIC")
+var (
+	waitgroup           sync.WaitGroup
+	sourceDrivers       []drivers.IDriver
+	quitChannels        []chan bool
+	harvestInterval     int
+	logLevelFlag        string
+	isHarvestingEnabled bool
+)
+
+func init() {
+	flag.IntVar(&harvestInterval, "harvest-interval", 60, "Minutes to wait between harvest runs")
+	flag.StringVar(&logLevelFlag, "log-level", "INFO", "One of DEBUG, INFO, WARN, ERROR, FATAL, PANIC")
+	flag.BoolVar(&isHarvestingEnabled, "enable-harvest", true, "False to disable harvesting posts")
+}
 
 func initialize() (err error) {
 	flag.Parse()
 
-	var new_log_level log.Level
-	if log_level, err = log.ParseLevel(logLevel); err != nil {
+	var logLevel log.Level
+	if logLevel, err = log.ParseLevel(logLevelFlag); err != nil {
 		log.Fatal("Invalid log level: '%s'", logLevel)
 	}
-	log.SetLevel(new_log_level)
+	log.SetLevel(logLevel)
 
 	var conf *config.Config
 
@@ -97,7 +107,7 @@ func harvestLoop(quit chan bool) {
 
 		log.Debug("Harvest complete. Waiting for %d minutes...", harvestInterval)
 		select {
-		case <-time.After(harvestInterval * time.Minute):
+		case <-time.After(time.Duration(harvestInterval) * time.Minute):
 			// Don't do anything, just exit the select{}
 		case <-quit:
 			return
@@ -109,5 +119,8 @@ func main() {
 	initialize()
 	defer shutdown()
 
-	beginHarvest()
+	if isHarvestingEnabled {
+		beginHarvest()
+	}
+	server.Launch()
 }

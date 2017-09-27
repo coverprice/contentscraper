@@ -4,19 +4,15 @@ import (
 	"fmt"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"path/filepath"
 	"testing"
 )
 
-func InitTestDb(t *testing.T) string {
-	dirpath, err := ioutil.TempDir("", "")
+func InitTestDb(t *testing.T) *TestDatabase {
+	testDb, err := NewTestDatabase()
 	if err != nil {
-		t.Error("Could not create TempDirectory", err)
+		t.Fatal("Could not init database", err)
 	}
-
-	Initialize(filepath.Join(dirpath, "sqlite3.db"))
-	return dirpath
+	return testDb
 }
 
 func createTestTable(t *testing.T, conn *DbConn) {
@@ -57,14 +53,14 @@ func verifyRowTypes(t *testing.T, conn *DbConn) {
 }
 
 func TestCanConnect(t *testing.T) {
-	testdb := NewTestDatabase(t)
+	testdb := InitTestDb(t)
 	defer testdb.Cleanup()
 
 	createTestTable(t, testdb.DbConn)
 }
 
 func TestCanInsertAndSelect(t *testing.T) {
-	testdb := NewTestDatabase(t)
+	testdb := InitTestDb(t)
 	defer testdb.Cleanup()
 
 	createTestTable(t, testdb.DbConn)
@@ -95,7 +91,7 @@ func TestCanInsertAndSelect(t *testing.T) {
 }
 
 func TestNamedParams(t *testing.T) {
-	testdb := NewTestDatabase(t)
+	testdb := InitTestDb(t)
 	defer testdb.Cleanup()
 
 	createTestTable(t, testdb.DbConn)

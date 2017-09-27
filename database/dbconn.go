@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"testing"
 )
 
 type Row sqlite3.RowMap
@@ -107,10 +106,10 @@ type TestDatabase struct {
 	dirpath string
 }
 
-func NewTestDatabase(t *testing.T) *TestDatabase {
+func NewTestDatabase() (*TestDatabase, error) {
 	dirpath, err := ioutil.TempDir("", "")
 	if err != nil {
-		t.Error("Could not create TempDirectory", err)
+		return nil, fmt.Errorf("Could not create TempDirectory: %v", err)
 	}
 
 	Initialize(filepath.Join(dirpath, "sqlite3.db"))
@@ -118,13 +117,13 @@ func NewTestDatabase(t *testing.T) *TestDatabase {
 	dbconn, err := NewConnection()
 	if err != nil {
 		os.RemoveAll(dirpath)
-		t.Error("Could not get new database connection", err)
+		return nil, fmt.Errorf("Could not get new database connection: %v", err)
 	}
 
 	return &TestDatabase{
 		DbConn:  dbconn,
 		dirpath: dirpath,
-	}
+	}, nil
 }
 
 func (this *TestDatabase) Cleanup() {

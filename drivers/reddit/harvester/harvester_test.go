@@ -13,7 +13,10 @@ import (
 )
 
 func TestHarvesterRetrievesAndStoresPosts(t *testing.T) {
-	var testDb = database.NewTestDatabase(t)
+	testDb, err := database.NewTestDatabase()
+	if err != nil {
+		t.Fatal("Could not init database", err)
+	}
 	defer testDb.Cleanup()
 
 	bakingTime_s = uint64(60 * 60) // Set this to just 1 hour.

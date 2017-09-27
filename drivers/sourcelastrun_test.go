@@ -17,7 +17,10 @@ const (
 )
 
 func TestCanCreateAndRetrieveSourceConfig(t *testing.T) {
-	var testDb = database.NewTestDatabase(t)
+	testDb, err := database.NewTestDatabase()
+	if err != nil {
+		t.Fatal("Could not init database", err)
+	}
 	defer testDb.Cleanup()
 
 	sut, err := NewSourceLastRunService(testDb.DbConn)

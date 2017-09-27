@@ -8,7 +8,10 @@ import (
 )
 
 func TestCanCreateAndRetrieveRedditPost(t *testing.T) {
-	var testDb = database.NewTestDatabase(t)
+	testDb, err := database.NewTestDatabase()
+	if err != nil {
+		t.Fatal("Could not init database", err)
+	}
 	defer testDb.Cleanup()
 
 	sut, err := NewPersistence(testDb.DbConn)

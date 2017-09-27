@@ -32,7 +32,7 @@ func init() {
 		}
 	}
 
-	flag.StringVar(&configFileName, "configfile", "", "Configuration file")
+	flag.StringVar(&configFileName, "config", "", fmt.Sprintf("Configuration file (default %s)", defaultConfigFileName))
 	flag.IntVar(&defaultPercentile, "default-percentile", 80, "Default filtering percentile")
 	flag.IntVar(&defaultMaxDailyPosts, "default-max-daily-posts", 100, "Default maximum daily posts")
 	configFilePaths = append(configFilePaths, ".")
