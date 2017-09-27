@@ -1,17 +1,17 @@
 package persistence
 
 import (
+	"github.com/coverprice/contentscraper/database"
 	"github.com/coverprice/contentscraper/drivers/reddit/types"
-	"github.com/coverprice/contentscraper/toolbox"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestCanCreateAndRetrieveRedditPost(t *testing.T) {
-	var testDb = toolbox.NewTestDatabase(t)
+	var testDb = database.NewTestDatabase(t)
 	defer testDb.Cleanup()
 
-	var p = NewPersistence(testDb.DbConn)
+	sut, err := NewPersistence(testDb.DbConn)
 
 	var post = &types.RedditPost{
 		Id:            "some_id",
@@ -28,22 +28,17 @@ func TestCanCreateAndRetrieveRedditPost(t *testing.T) {
 		SubredditId:   "ppp9999",
 	}
 
-	var err error
-	if err = p.StorePost(&post); err != nil {
-		t.Error("Could not store 1st post", err)
-	}
+	require.Nil(t, sut.StorePost(post), "Could not store 1st post")
 
 	post.Id = "another_id"
 	post.TimeCreated = 9999
-	if err := p.StorePost(&post); err != nil {
-		t.Error("Could not store 2nd post", err)
-	}
+	require.Nil(t, sut.StorePost(post), "Could not store 2nd post")
 
 	var posts []types.RedditPost
-	if posts, err = p.GetPosts(
-		"WHERE subreddit=$a ORDER BY time_created", "funny",
+	if posts, err = sut.GetPosts(
+		"WHERE subreddit_name=$a ORDER BY time_created", "funny",
 	); err != nil {
-		t.Error("Could not retrieve posts", err)
+		t.Error("Could not retrieve posts:", err)
 	}
 
 	require.Equal(t, 2, len(posts), "Expected length of results")

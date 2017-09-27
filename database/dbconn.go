@@ -5,6 +5,10 @@ import (
 	// "github.com/davecgh/go-spew/spew"
 	"github.com/mxk/go-sqlite/sqlite3"
 	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"testing"
 )
 
 type Row sqlite3.RowMap
@@ -53,11 +57,12 @@ func (conn *DbConn) GetFirstRow(sql string, params ...interface{}) (row *Row, er
 	} else if err != nil {
 		return nil, err
 	}
-	return_row := make(Row)
-	if err = stmt.Scan(return_row); err != nil {
+	sqlrow := make(sqlite3.RowMap)
+	if err = stmt.Scan(sqlrow); err != nil {
 		return nil, err
 	}
-	return &return_row, nil
+	var retrow = Row(sqlrow)
+	return &retrow, nil
 }
 
 func (conn *DbConn) GetAllRows(sql string, params ...interface{}) (result MultiRowResult, err error) {
@@ -71,11 +76,12 @@ func (conn *DbConn) GetAllRows(sql string, params ...interface{}) (result MultiR
 		return result, err
 	}
 	for ; err == nil; err = stmt.Next() {
-		return_row := make(Row)
-		if err = stmt.Scan(return_row); err != nil {
+		sqlrow := make(sqlite3.RowMap)
+		if err = stmt.Scan(sqlrow); err != nil {
 			return
 		}
-		result = append(result, return_row)
+		var retrow = Row(sqlrow)
+		result = append(result, retrow)
 	}
 	return result, nil
 }
@@ -94,4 +100,34 @@ func OrderedParamsToArgs(params ...interface{}) (args sqlite3.NamedArgs) {
 		}
 	}
 	return args
+}
+
+type TestDatabase struct {
+	DbConn  *DbConn
+	dirpath string
+}
+
+func NewTestDatabase(t *testing.T) *TestDatabase {
+	dirpath, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Error("Could not create TempDirectory", err)
+	}
+
+	Initialize(filepath.Join(dirpath, "sqlite3.db"))
+
+	dbconn, err := NewConnection()
+	if err != nil {
+		os.RemoveAll(dirpath)
+		t.Error("Could not get new database connection", err)
+	}
+
+	return &TestDatabase{
+		DbConn:  dbconn,
+		dirpath: dirpath,
+	}
+}
+
+func (this *TestDatabase) Cleanup() {
+	Shutdown()
+	os.RemoveAll(this.dirpath)
 }

@@ -1,14 +1,13 @@
 package database
 
 import (
-	"os"
 	"testing"
 )
 
 // Tests whether the automatic closure works
 func TestDbConn(t *testing.T) {
-	dirpath := initTestDb(t)
-	defer os.RemoveAll(dirpath)
+	testDb := NewTestDatabase(t)
+	defer testDb.Cleanup()
 
 	var err error
 	_, err = NewConnection()

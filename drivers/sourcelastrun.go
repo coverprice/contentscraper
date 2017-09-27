@@ -37,14 +37,7 @@ func (this *SourceLastRunService) initTables() (err error) {
         CREATE TABLE IF NOT EXISTS source_last_run
             ( id TEXT PRIMARY KEY
             , last_run INTEGER NOT NULL
-        )
-        ;
-        CREATE TABLE IF NOT EXISTS post
-            ( id TEXT PRIMARY KEY
-            , time_created INTEGER NOT NULL
-            , score INTEGER NOT NULL
-            , is_published INTEGER NOT NULL
-        )
+        ) WITHOUT ROWID
     `)
 	return
 }
@@ -62,16 +55,19 @@ func (this *SourceLastRunService) GetSourceLastRunFromId(
         SELECT last_run
         FROM source_last_run
         WHERE id = $a`,
-		id,
+		string(id),
 	)
 	if err != nil {
 		return nil, err
 	}
 	if row != nil {
 		var ok bool
-		if lastRun.DateLastRun, ok = (*row)["last_run"].(uint64); !ok {
+		// return nil, fmt.Errorf(spew.Sdump((*row)["last_run"]))
+		var dateLastRun int64
+		if dateLastRun, ok = (*row)["last_run"].(int64); !ok {
 			return nil, fmt.Errorf("Could not interpret last_run column as uint64")
 		}
+		lastRun.DateLastRun = uint64(dateLastRun)
 	}
 	if lastRun.DateLastRun == 0 {
 		// No row (or the value was 0), so fill in a default value
@@ -92,8 +88,8 @@ func (this *SourceLastRunService) UpsertLastRun(
             ( $a
             , $b
         )`,
-		lastRun.SourceConfigId,
-		lastRun.DateLastRun,
+		string(lastRun.SourceConfigId),
+		int64(lastRun.DateLastRun),
 	)
 	return
 }

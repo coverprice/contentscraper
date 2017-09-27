@@ -26,7 +26,6 @@ func (this *Persistence) initTables() (err error) {
         CREATE TABLE IF NOT EXISTS redditpost
             ( id TEXT
             , name TEXT
-            , rawid TEXT
             , permalink TEXT
             , time_created INTEGER
             , is_active INTEGER
@@ -38,7 +37,7 @@ func (this *Persistence) initTables() (err error) {
             , subreddit_id TEXT
             , is_published INTEGER DEFAULT 0
             , PRIMARY KEY (id, subreddit_id)
-        )
+        ) WITHOUT ROWID
         ;
         CREATE INDEX IF NOT EXISTS
             reddit_subreddit_name ON redditpost(subreddit_name)
@@ -66,6 +65,7 @@ func (this *Persistence) StorePost(post *types.RedditPost) (err error) {
             , url
             , subreddit_name
             , subreddit_id
+            , is_published
         ) VALUES
             ( $a
             , $b
@@ -79,7 +79,6 @@ func (this *Persistence) StorePost(post *types.RedditPost) (err error) {
             , $j
             , $k
             , $l
-            , $m
         )`,
 		post.Id,
 		post.Name,
@@ -92,6 +91,7 @@ func (this *Persistence) StorePost(post *types.RedditPost) (err error) {
 		post.Url,
 		post.SubredditName,
 		post.SubredditId,
+		post.IsPublished,
 	)
 	return err
 }
@@ -106,12 +106,11 @@ func (this *Persistence) GetPosts(
 		return nil, err
 	}
 	for _, row := range rows {
-		var reddit_post types.RedditPost
-		err = mapstructure.Decode(row, &reddit_post)
-		if err != nil {
+		var redditPost types.RedditPost
+		if err = mapstructure.Decode(row, &redditPost); err != nil {
 			return nil, fmt.Errorf("Could not decode reddit post ID: '%s' subreddit: '%s' %v", row["id"], row["subreddit"], err)
 		}
-		posts = append(posts, reddit_post)
+		posts = append(posts, redditPost)
 	}
 	return posts, nil
 }

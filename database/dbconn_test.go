@@ -2,16 +2,14 @@ package database
 
 import (
 	"fmt"
-	"github.com/coverprice/contentscraper/toolbox"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/mxk/go-sqlite/sqlite3"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 )
 
-func initTestDb(t *testing.T) string {
+func InitTestDb(t *testing.T) string {
 	dirpath, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Error("Could not create TempDirectory", err)
@@ -35,15 +33,11 @@ func createTestTable(t *testing.T, conn *DbConn) {
 }
 
 func verifyRowTypes(t *testing.T, conn *DbConn) {
-	var row *sqlite3.RowMap
+	var row *Row
 	var err error
 	row, err = conn.GetFirstRow(`SELECT * FROM x`)
-	if err != nil {
-		t.Error("Could not retrieve a row", err)
-	}
-	if row == nil {
-		t.Error("Expected a row")
-	}
+	require.Nil(t, err, "Could not retrieve a row")
+	require.NotNil(t, row, "Expected a row")
 
 	var colnames = []string{"a", "b", "c"}
 	for _, colname := range colnames {
@@ -63,49 +57,37 @@ func verifyRowTypes(t *testing.T, conn *DbConn) {
 }
 
 func TestCanConnect(t *testing.T) {
-	dirpath := toolbox.InitTestDb(t)
-	defer os.RemoveAll(dirpath)
-	defer Shutdown()
+	testdb := NewTestDatabase(t)
+	defer testdb.Cleanup()
 
-	conn, err := NewConnection()
-	if err != nil {
-		t.Error("Could not get a connection", err)
-	}
-	createTestTable(t, conn)
+	createTestTable(t, testdb.DbConn)
 }
 
 func TestCanInsertAndSelect(t *testing.T) {
-	dirpath := initTestDb(t)
-	defer os.RemoveAll(dirpath)
-	defer Shutdown()
+	testdb := NewTestDatabase(t)
+	defer testdb.Cleanup()
 
-	conn, err := NewConnection()
-	if err != nil {
-		t.Error("Could not get a connection", err)
-	}
-	createTestTable(t, conn)
+	createTestTable(t, testdb.DbConn)
 
-	err = conn.ExecSql(`INSERT INTO x (a, b, c) VALUES (1, 'Fruit', 1.234)`)
+	err := testdb.DbConn.ExecSql(`INSERT INTO x (a, b, c) VALUES (1, 'Fruit', 1.234)`)
 	if err != nil {
 		t.Error("Could not insert a row", err)
 	}
 
-	verifyRowTypes(t, conn)
+	verifyRowTypes(t, testdb.DbConn)
 
-	err = conn.ExecSql(`INSERT INTO x (a, b, c) VALUES (2, 'Machine', 5.678)`)
+	err = testdb.DbConn.ExecSql(`INSERT INTO x (a, b, c) VALUES (2, 'Machine', 5.678)`)
 	if err != nil {
 		t.Error("Could not insert another row", err)
 	}
 
 	var rows MultiRowResult
-	rows, err = conn.GetAllRows(`SELECT * FROM x ORDER BY a`)
+	rows, err = testdb.DbConn.GetAllRows(`SELECT * FROM x ORDER BY a`)
 	if err != nil {
 		t.Error("Could not retrieve all rows", err)
 	}
 
-	if len(rows) != 2 {
-		t.Error(fmt.Sprintf("Expected 2 rows, but instead got %d", len(rows)))
-	}
+	require.Len(t, rows, 2, "Insufficient rows retrieved")
 
 	if rows[0]["a"] != int64(1) || rows[1]["a"] != int64(2) {
 		t.Error("Values of the rows is not what was expected", spew.Sdump(rows))
@@ -113,20 +95,15 @@ func TestCanInsertAndSelect(t *testing.T) {
 }
 
 func TestNamedParams(t *testing.T) {
-	dirpath := initTestDb(t)
-	defer os.RemoveAll(dirpath)
-	defer Shutdown()
+	testdb := NewTestDatabase(t)
+	defer testdb.Cleanup()
 
-	conn, err := NewConnection()
-	if err != nil {
-		t.Error("Could not get a connection", err)
-	}
-	createTestTable(t, conn)
+	createTestTable(t, testdb.DbConn)
 
-	err = conn.ExecSql(`INSERT INTO x (a, b, c) VALUES ($a, $b, $c)`, 1, "Fruit", 1.234)
-	if err != nil {
-		t.Error("Could not insert a row", err)
-	}
+	require.Nil(t,
+		testdb.DbConn.ExecSql(`INSERT INTO x (a, b, c) VALUES ($a, $b, $c)`, 1, "Fruit", 1.234),
+		"Could not insert a row",
+	)
 
-	verifyRowTypes(t, conn)
+	verifyRowTypes(t, testdb.DbConn)
 }
