@@ -49,6 +49,7 @@ func TestHarvesterRetrievesAndStoresPosts(t *testing.T) {
 		t.Error("Row count could not be converted to an int64")
 	}
 	require.NotEqual(t, 0, cnt, "Gathered no posts")
+	t.Logf("Harvested %d posts", cnt)
 }
 
 func getSut(t *testing.T, dbconn *database.DbConn) *Harvester {
