@@ -1,40 +1,63 @@
 package persistence
 
 import (
-	"fmt"
-	"github.com/coverprice/contentscraper/database"
+	"database/sql"
 	"github.com/coverprice/contentscraper/drivers/reddit/types"
-	"github.com/mitchellh/mapstructure"
 )
 
 type Persistence struct {
-	dbconn *database.DbConn
+	dbconn          *sql.DB
+	searchPostByPk  *sql.Stmt
+	searchPostByUrl *sql.Stmt
 }
 
-func NewPersistence(dbconn *database.DbConn) (persistence *Persistence, err error) {
+func NewPersistence(dbconn *sql.DB) (persistence *Persistence, err error) {
 	persistence = &Persistence{
 		dbconn: dbconn,
 	}
 	err = persistence.initTables()
+
+	persistence.searchPostByPk, err = persistence.dbconn.Prepare(`
+        SELECT EXISTS(
+            SELECT 1
+            FROM redditpost
+            WHERE id = $a
+              AND subreddit_id = $b
+            LIMIT 1
+        )`)
+	if err != nil {
+		return
+	}
+	persistence.searchPostByUrl, err = persistence.dbconn.Prepare(`
+        SELECT EXISTS(
+            SELECT 1
+            FROM redditpost
+            WHERE url = $a
+            LIMIT 1
+        )`)
+	if err != nil {
+		return
+	}
 	return
 }
 
 // TODO: Investigate whether this code could be replaced by an ORM framework
 
 func (this *Persistence) initTables() (err error) {
-	err = this.dbconn.ExecSql(`
+	_, err = this.dbconn.Exec(`
         CREATE TABLE IF NOT EXISTS redditpost
             ( id TEXT
-            , name TEXT
-            , permalink TEXT
-            , time_created INTEGER
-            , is_active INTEGER
-            , is_sticky INTEGER
-            , score INTEGER
-            , title TEXT
+            , name TEXT NOT NULL
+            , permalink TEXT NOT NULL
+            , time_created INTEGER NOT NULL
+            , time_stored INTEGER NOT NULL
+            , is_active INTEGER NOT NULL
+            , is_sticky INTEGER NOT NULL
+            , score INTEGER NOT NULL
+            , title TEXT NOT NULL
             , url TEXT
-            , subreddit_name TEXT
-            , subreddit_id TEXT
+            , subreddit_name TEXT NOT NULL
+            , subreddit_id TEXT NOT NULL
             , is_published INTEGER DEFAULT 0
             , PRIMARY KEY (id, subreddit_id)
         ) WITHOUT ROWID
@@ -43,7 +66,7 @@ func (this *Persistence) initTables() (err error) {
             reddit_subreddit_name ON redditpost(subreddit_name)
         ;
         CREATE INDEX IF NOT EXISTS
-            reddit_title ON redditpost(title)
+            reddit_url ON redditpost(url)
         ;
         CREATE INDEX IF NOT EXISTS
             reddit_time_created ON redditpost(time_created)
@@ -51,13 +74,61 @@ func (this *Persistence) initTables() (err error) {
 	return
 }
 
-func (this *Persistence) StorePost(post *types.RedditPost) (err error) {
-	err = this.dbconn.ExecSql(`
-        INSERT OR REPLACE INTO redditpost
+// Stores/Updates a RedditPost and returns whether it was a store or an
+// update.
+
+type StoreResult int
+
+const (
+	STORERESULT_NEW = iota
+	STORERESULT_UPDATED
+	STORERESULT_SKIPPED
+)
+
+func (this *Persistence) StorePost(
+	post *types.RedditPost,
+) (
+	result StoreResult,
+	err error,
+) {
+	var postExists int
+	if err = this.searchPostByPk.QueryRow(post.Id, post.SubredditId).Scan(&postExists); err != nil {
+		return
+	}
+	if postExists == 0 {
+		// Does not exist when searching by Primary Key.
+
+		// If this post has an image URL, verify that it doesn't already
+		// exist elsewhere.
+		if post.Url != "" {
+			if err = this.searchPostByUrl.QueryRow(post.Url).Scan(&postExists); err != nil {
+				return
+			}
+			if postExists != 0 {
+				return STORERESULT_SKIPPED, nil
+			}
+		}
+		// We need to insert this post
+		if err = this.insertPost(post); err != nil {
+			return
+		}
+		return STORERESULT_NEW, nil
+	}
+	// Exists, update
+	if err = this.updatePost(post); err != nil {
+		return
+	}
+	return STORERESULT_UPDATED, nil
+}
+
+func (this *Persistence) insertPost(post *types.RedditPost) (err error) {
+	_, err = this.dbconn.Exec(`
+        INSERT INTO redditpost
             ( id
             , name
             , permalink
             , time_created
+            , time_stored
             , is_active
             , is_sticky
             , score
@@ -79,11 +150,13 @@ func (this *Persistence) StorePost(post *types.RedditPost) (err error) {
             , $j
             , $k
             , $l
+            , $m
         )`,
 		post.Id,
 		post.Name,
 		post.Permalink,
 		int64(post.TimeCreated),
+		int64(post.TimeStored),
 		post.IsActive,
 		post.IsSticky,
 		post.Score,
@@ -93,23 +166,91 @@ func (this *Persistence) StorePost(post *types.RedditPost) (err error) {
 		post.SubredditId,
 		post.IsPublished,
 	)
-	return err
+	return
+}
+
+func (this *Persistence) updatePost(post *types.RedditPost) (err error) {
+	_, err = this.dbconn.Exec(`
+        UPDATE redditpost SET
+             name = $a
+            , permalink = $b
+            , is_active = $c
+            , is_sticky = $d
+            , score = $e
+            , title = $f
+            , url = $g
+            , is_published = $h
+        WHERE id = $i
+          AND subreddit_id = $j
+        `,
+		post.Name,
+		post.Permalink,
+		post.IsActive,
+		post.IsSticky,
+		post.Score,
+		post.Title,
+		post.Url,
+		post.IsPublished,
+
+		post.Id,
+		post.SubredditId,
+	)
+	return
 }
 
 func (this *Persistence) GetPosts(
 	where_clause string,
 	params ...interface{},
 ) (posts []types.RedditPost, err error) {
-	var rows database.MultiRowResult
-	var sql = "SELECT * FROM redditpost " + where_clause
-	if rows, err = this.dbconn.GetAllRows(sql, params...); err != nil {
+	var rows *sql.Rows
+	var sql = `
+        SELECT 
+            id
+            , name
+            , permalink
+            , time_created
+            , is_active
+            , is_sticky
+            , score
+            , title
+            , url
+            , subreddit_name
+            , subreddit_id
+            , is_published
+        FROM redditpost
+        ` + where_clause
+	if rows, err = this.dbconn.Query(sql, params...); err != nil {
 		return nil, err
 	}
-	for _, row := range rows {
+	defer rows.Close()
+
+	for rows.Next() {
 		var redditPost types.RedditPost
-		if err = mapstructure.Decode(row, &redditPost); err != nil {
-			return nil, fmt.Errorf("Could not decode reddit post ID: '%s' subreddit: '%s' %v", row["id"], row["subreddit"], err)
+
+		err = rows.Scan(
+			&redditPost.Id,
+			&redditPost.Name,
+			&redditPost.Permalink,
+			&redditPost.TimeCreated,
+			&redditPost.IsActive,
+			&redditPost.IsSticky,
+			&redditPost.Score,
+			&redditPost.Title,
+			&redditPost.Url,
+			&redditPost.SubredditName,
+			&redditPost.SubredditId,
+			&redditPost.IsPublished,
+		)
+		if err != nil {
+			return
 		}
+		/*
+			        Maybe this could make a comeback, if I could figure out how...
+			        Possibly, Scan the row into a map?
+			        if err = mapstructure.Decode(row, &redditPost); err != nil {
+					return nil, fmt.Errorf("Could not decode reddit post ID: '%s' subreddit: '%s' %v", row["id"], row["subreddit"], err)
+					}
+		*/
 		posts = append(posts, redditPost)
 	}
 	return posts, nil

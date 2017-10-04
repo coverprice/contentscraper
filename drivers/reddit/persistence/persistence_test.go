@@ -21,21 +21,41 @@ func TestCanCreateAndRetrieveRedditPost(t *testing.T) {
 		Name:          "jkjkjk",
 		IsPublished:   false,
 		TimeCreated:   1234,
+		TimeStored:    1235,
 		Permalink:     "/r/funny/xyz123",
 		IsActive:      true,
 		IsSticky:      false,
 		Score:         5678,
 		Title:         "A fake post",
-		Url:           "/r/funny/xyz1235555",
+		Url:           "https://imgur.com/foo.jpg",
 		SubredditName: "funny",
 		SubredditId:   "ppp9999",
 	}
 
-	require.Nil(t, sut.StorePost(post), "Could not store 1st post")
+	var result StoreResult
+	result, err = sut.StorePost(post)
+	require.Nil(t, err, "Could not store 1st post")
+	require.Equal(t, StoreResult(STORERESULT_NEW), result, "Unexpected StoreResult")
 
+	// Same post again, should be updated
+	post.Score = 9999
+	result, err = sut.StorePost(post)
+	require.Nil(t, err, "Could not update 1st post")
+	require.Equal(t, StoreResult(STORERESULT_UPDATED), result, "Unexpected StoreResult")
+
+	// Different post ID, should be skipped because the URL already exists
 	post.Id = "another_id"
-	post.TimeCreated = 9999
-	require.Nil(t, sut.StorePost(post), "Could not store 2nd post")
+	post.SubredditId = "another_subreddit_id"
+	result, err = sut.StorePost(post)
+	require.Nil(t, err, "Could not duplicate 1st post")
+	require.Equal(t, StoreResult(STORERESULT_SKIPPED), result, "Unexpected StoreResult")
+
+	// Different post ID, should be new because the URL is different
+	post.TimeCreated = 5555
+	post.Url = "https://tinypic.com/bar.jpg"
+	result, err = sut.StorePost(post)
+	require.Nil(t, err, "Could not create 2nd post")
+	require.Equal(t, StoreResult(STORERESULT_NEW), result, "Unexpected StoreResult")
 
 	var posts []types.RedditPost
 	if posts, err = sut.GetPosts(

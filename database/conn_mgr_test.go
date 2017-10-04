@@ -5,7 +5,7 @@ import (
 )
 
 // Tests whether the automatic closure works
-func TestDbConn(t *testing.T) {
+func TestConnectionManagerConn(t *testing.T) {
 	testDb := InitTestDb(t)
 	defer testDb.Cleanup()
 

@@ -7,6 +7,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
+)
+
+const (
+	media_type_text  = "text"
+	media_type_image = "image"
 )
 
 type Config struct {
@@ -40,11 +46,19 @@ func (this RedditFeed) Validate() (err error) {
 	if this.Name == "" {
 		return fmt.Errorf("Empty feed name")
 	}
+	if !regexp.MustCompile("^[-_a-zA-Z0-9]+$").MatchString(this.Name) {
+		return fmt.Errorf("Invalid feed name, must contain only chars from A-Z, a-z, 0-9, '_', & '-'")
+	}
 	if this.Description == "" {
 		return fmt.Errorf("Empty feed description")
 	}
-	if !(this.Media == "image" || this.Media == "text") {
-		return fmt.Errorf("Invalid media type: '%s', must be one of 'image' or 'text'", this.Media)
+	if !(this.Media == media_type_image || this.Media == media_type_text) {
+		return fmt.Errorf(
+			"Invalid media type: '%s', must be one of '%s' or '%s'",
+			this.Media,
+			media_type_image,
+			media_type_text,
+		)
 	}
 	return nil
 }
@@ -193,6 +207,10 @@ func parseFromString(configblob string) (conf *Config, err error) {
 			conf.Reddit.Feeds[idx].DefaultMaxDailyPosts = 0
 		} else if redditfeed.DefaultMaxDailyPosts == 0 {
 			conf.Reddit.Feeds[idx].DefaultMaxDailyPosts = defaultMaxDailyPosts
+		}
+
+		if redditfeed.Media == "" {
+			conf.Reddit.Feeds[idx].Media = media_type_text
 		}
 		for subidx, subreddit := range redditfeed.Subreddits {
 			if subreddit.Percentile == 0 {

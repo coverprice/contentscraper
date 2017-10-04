@@ -1,26 +1,33 @@
 package reddit
 
 import (
-	"fmt"
 	"github.com/coverprice/contentscraper/drivers"
 	persist "github.com/coverprice/contentscraper/drivers/reddit/persistence"
 	scrape "github.com/coverprice/contentscraper/drivers/reddit/scraper"
 	"github.com/coverprice/contentscraper/drivers/reddit/types"
+	// log "github.com/sirupsen/logrus"
 	"time"
 )
 
-// bakingTime_s is how long we leave posts to give them time to get a score.
-var bakingTime_s = uint64(1 * 24 * 60 * 60)
-
 // --------------------------------------
 
+// Harvester controls the process of scraping posts from Reddit sources
+// and persisting them.
+// It uses a Scraper client to pull posts from a specific source,
+// and a Persistence layer to insert/update them. (Posts already stored
+// are updated to reflect any changes in their score, deleted status,
+// etc).
 type Harvester struct {
 	scraper              *scrape.Scraper
 	persistence          *persist.Persistence
 	sourceLastRunService *drivers.SourceLastRunService
 	sources              []types.SubredditSourceConfig
+	MaxPagesToScrape     int     // Maximum # of pages to scrape (per source)
+	MinPostsPerScrape    int     // Min posts in scrape result to continue
+	MinNewPostPercent    float64 // Min new posts in scrape result to continue.
 }
 
+// Creates a new Harvester instance
 func NewHarvester(
 	scraper *scrape.Scraper,
 	persistence *persist.Persistence,
@@ -31,6 +38,9 @@ func NewHarvester(
 		persistence:          persistence,
 		sourceLastRunService: sourceLastRunService,
 		sources:              make([]types.SubredditSourceConfig, 0),
+		MaxPagesToScrape:     10,
+		MinPostsPerScrape:    10,
+		MinNewPostPercent:    20.0,
 	}, nil
 }
 
@@ -48,69 +58,55 @@ func (this *Harvester) Harvest() (err error) {
 }
 
 func (this *Harvester) pullSource(sourceConfig types.SubredditSourceConfig) (err error) {
+	// TODO: SourceLastRunService doesn't look that useful now. Consider removing it.
 	var now = uint64(time.Now().Unix())
 	lastRun, err := this.sourceLastRunService.GetSourceLastRunFromId(sourceConfig.GetSourceConfigId())
 	if err != nil {
 		return err
 	}
 
-	// Get new posts up until the time we were last run, minus the bakingTime. This means some posts
-	// will be re-retrieved and updated with a more recent score.
-	var fromTime = lastRun.DateLastRun - bakingTime_s
-	var params = scrape.NewParamsForNew(sourceConfig.Subreddit, fromTime, 10000)
-	this.scraper.Start(params)
-	if err = this.storeResults(); err != nil {
-		return
-	}
+	var context = scrape.NewContextForHot(sourceConfig.Subreddit)
+	numPagesScraped := 0
+	for {
+		var posts []types.RedditPost
+		posts, err = this.scraper.GetNextResults(&context)
+		if err != nil {
+			return
+		}
+		numPagesScraped++
 
-	// In addition to the new + recently baked posts, also get the "top" feed and persist any posts
-	// from there. This leverages reddit's own date+score ranking algorithm to ensure that we're
-	// storing popular posts.
-	params = scrape.NewParamsForHot(sourceConfig.Subreddit, 90)
-	this.scraper.Start(params)
-	if err = this.storeResults(); err != nil {
-		return
+		numNewPosts := 0
+		for _, post := range posts {
+			var result persist.StoreResult
+			post.TimeStored = now
+			if result, err = this.persistence.StorePost(&post); err != nil {
+				return
+			}
+			if result == persist.StoreResult(persist.STORERESULT_NEW) {
+				numNewPosts++
+			}
+		}
+
+		// Decide when to break out of the loop
+		if numPagesScraped > this.MaxPagesToScrape {
+			// Prevents us from going too far back in time.
+			break
+		}
+		if len(posts) < this.MinPostsPerScrape {
+			// If we have <10 posts in a result, we're probably at the end of
+			//  Reddit's available feed.
+			break
+		}
+		if 100.0*float64(numNewPosts)/float64(len(posts)) < this.MinNewPostPercent {
+			// If # of new posts is < certain % of posts scraped in this page,
+			// going back further is probably pointless.
+			break
+		}
 	}
 
 	lastRun.DateLastRun = now
 	if err := this.sourceLastRunService.UpsertLastRun(lastRun); err != nil {
 		return err
-	}
-	return nil
-}
-
-// Called when the scraper has just started. storeResults will pull the RedditPosts
-// from the result channel and persist them to the DB.
-func (this *Harvester) storeResults() (err error) {
-	var timeout = time.NewTimer(2 * time.Minute)
-	defer timeout.Stop()
-RetrievePostLoop:
-	for {
-		if !timeout.Stop() {
-			<-timeout.C
-		}
-		timeout.Reset(2 * time.Minute)
-
-		select {
-		case <-timeout.C:
-			return fmt.Errorf("Scraping timed out")
-
-		case err, ok := (<-this.scraper.ErrChan):
-			if ok {
-				return fmt.Errorf("An error occurred in the scraper goroutine: %v", err)
-			}
-
-		case post, ok := (<-this.scraper.ResultChan):
-			if !ok {
-				// Nothing else on postChan, channel must be closed.
-				break RetrievePostLoop
-			}
-			if err = this.persistence.StorePost(post); err != nil {
-				// Signal to scraper goroutine that it should quit.
-				this.scraper.KillChan <- true
-				return
-			}
-		}
 	}
 	return nil
 }

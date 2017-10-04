@@ -11,6 +11,7 @@ type RedditPost struct {
 	Name          string // Note that this more of an ID, used in the "after" parameter of the scraper
 	IsPublished   bool
 	TimeCreated   uint64 `mapstructure:"time_created"`
+	TimeStored    uint64 `mapstructure:"time_stored"`
 	Permalink     string
 	IsActive      bool
 	IsSticky      bool
@@ -29,6 +30,7 @@ func NewRedditPostFromBotPost(bp *reddit.Post) (p RedditPost) {
 	p.Score = int64(bp.Score)
 	p.IsPublished = false
 	p.TimeCreated = bp.CreatedUTC
+	p.TimeStored = bp.CreatedUTC
 	p.Permalink = bp.Permalink
 	p.IsActive = !bp.Deleted
 	p.IsSticky = bp.Stickied
@@ -50,9 +52,9 @@ func (this *SubredditSourceConfig) GetSourceConfigId() drivers.SourceConfigId {
 	return drivers.SourceConfigId(fmt.Sprintf("reddit:%s", this.Subreddit))
 }
 
-/*
-type SubredditFilterCriteria struct {
-	drivers.FilterCriteria
-	Subreddit string
+type SubredditFeed struct {
+	Name          string
+	Description   string
+	Media         string
+	SourceConfigs []SubredditSourceConfig
 }
-*/

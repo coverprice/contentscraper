@@ -4,8 +4,7 @@ package drivers
 // run on a given source.
 
 import (
-	"fmt"
-	"github.com/coverprice/contentscraper/database"
+	"database/sql"
 	"time"
 )
 
@@ -17,14 +16,14 @@ type SourceLastRun struct {
 }
 
 type SourceLastRunService struct {
-	dbconn *database.DbConn
+	dbconn *sql.DB
 	// The # of seconds prior to now that
 	// a missing "Last Run" record is presumed to be.
 	DefaultLastRunInterval_s uint64
 }
 
 func NewSourceLastRunService(
-	dbconn *database.DbConn,
+	dbconn *sql.DB,
 ) (sourceLastRunService *SourceLastRunService, err error) {
 	sourceLastRunService = &SourceLastRunService{
 		dbconn: dbconn,
@@ -37,7 +36,7 @@ func NewSourceLastRunService(
 }
 
 func (this *SourceLastRunService) initTables() (err error) {
-	err = this.dbconn.ExecSql(`
+	_, err = this.dbconn.Exec(`
         CREATE TABLE IF NOT EXISTS source_last_run
             ( id TEXT PRIMARY KEY
             , last_run INTEGER NOT NULL
@@ -54,37 +53,23 @@ func (this *SourceLastRunService) GetSourceLastRunFromId(
 		DateLastRun:    0,
 	}
 
-	var row *database.Row
-	row, err = this.dbconn.GetFirstRow(`
+	err = this.dbconn.QueryRow(`
         SELECT last_run
         FROM source_last_run
         WHERE id = $a`,
 		string(id),
-	)
-	if err != nil {
-		return nil, err
-	}
-	if row != nil {
-		var ok bool
-		// return nil, fmt.Errorf(spew.Sdump((*row)["last_run"]))
-		var dateLastRun int64
-		if dateLastRun, ok = (*row)["last_run"].(int64); !ok {
-			return nil, fmt.Errorf("Could not interpret last_run column as uint64")
-		}
-		lastRun.DateLastRun = uint64(dateLastRun)
-	}
-	if lastRun.DateLastRun == 0 {
-		// No row (or the value was 0), so fill in a default value
-		// TODO: make the default value configurable at runtime.
+	).Scan(&lastRun.DateLastRun)
+	if err == sql.ErrNoRows {
 		lastRun.DateLastRun = uint64(time.Now().Unix()) - this.DefaultLastRunInterval_s
+		err = nil
 	}
-	return lastRun, nil
+	return
 }
 
 func (this *SourceLastRunService) UpsertLastRun(
 	lastRun *SourceLastRun,
 ) (err error) {
-	err = this.dbconn.ExecSql(`
+	_, err = this.dbconn.Exec(`
         INSERT OR REPLACE INTO source_last_run
             ( id
             , last_run

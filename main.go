@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"fmt"
 	"github.com/coverprice/contentscraper/config"
@@ -21,12 +22,15 @@ var (
 	harvestInterval     int
 	logLevelFlag        string
 	isHarvestingEnabled bool
+	webServer           *server.Server
+	port                int
 )
 
 func init() {
 	flag.IntVar(&harvestInterval, "harvest-interval", 60, "Minutes to wait between harvest runs")
 	flag.StringVar(&logLevelFlag, "log-level", "INFO", "One of DEBUG, INFO, WARN, ERROR, FATAL, PANIC")
 	flag.BoolVar(&isHarvestingEnabled, "enable-harvest", true, "False to disable harvesting posts")
+	flag.IntVar(&port, "port", 8080, "Port to listen on")
 }
 
 func initialize() (err error) {
@@ -50,25 +54,34 @@ func initialize() (err error) {
 	// Drivers module
 	log.Debug("Initializing Drivers module.")
 	var sourceLastRunService *drivers.SourceLastRunService
-	var dbconn *database.DbConn
+	var dbconn1, dbconn2 *sql.DB
 
-	if dbconn, err = database.NewConnection(); err != nil {
-		return fmt.Errorf("Could not create new DB connection: %v", err)
+	if dbconn1, err = database.NewConnection(); err != nil {
+		return fmt.Errorf("Could not create DB connection [1]: %v", err)
 	}
-	if sourceLastRunService, err = drivers.NewSourceLastRunService(dbconn); err != nil {
+	if sourceLastRunService, err = drivers.NewSourceLastRunService(dbconn1); err != nil {
 		return fmt.Errorf("Could not initialize SourceLastRunService: %v", err)
 	}
 
 	// Init RedditDriver
 	log.Debug("Initializing Reddit driver.")
 	var redditDriver *reddit.RedditDriver
-	if dbconn, err = database.NewConnection(); err != nil {
-		return fmt.Errorf("Could not create new DB connection: %v", err)
+	if dbconn1, err = database.NewConnection(); err != nil {
+		return fmt.Errorf("Could not create DB connection [2]: %v", err)
 	}
-	if redditDriver, err = reddit.NewRedditDriver(dbconn, conf, sourceLastRunService); err != nil {
+	if dbconn2, err = database.NewConnection(); err != nil {
+		return fmt.Errorf("Could not create DB connection [3]: %v", err)
+	}
+	if redditDriver, err = reddit.NewRedditDriver(dbconn1, dbconn2, conf, sourceLastRunService); err != nil {
 		return fmt.Errorf("Could not initialize RedditDriver: %v", err)
 	}
 	sourceDrivers = append(sourceDrivers, redditDriver)
+
+	// init web server
+	webServer = server.NewServer(port)
+	for _, driver := range sourceDrivers {
+		webServer.AddDriver(driver)
+	}
 
 	log.Debug("Initialization complete.")
 	return nil
@@ -96,6 +109,10 @@ func beginHarvest() {
 
 func harvestLoop(quit chan bool) {
 	defer waitgroup.Done()
+	var timeout = time.NewTimer(time.Duration(harvestInterval) * time.Minute)
+	timeout.Stop()
+	defer timeout.Stop()
+
 	for {
 		for _, driver := range sourceDrivers {
 			log.Debug("Running Harvest...")
@@ -106,8 +123,13 @@ func harvestLoop(quit chan bool) {
 		}
 
 		log.Debug("Harvest complete. Waiting for %d minutes...", harvestInterval)
+		if !timeout.Stop() {
+			<-timeout.C
+		}
+		timeout.Reset(time.Duration(harvestInterval) * time.Minute)
 		select {
-		case <-time.After(time.Duration(harvestInterval) * time.Minute):
+		case <-timeout.C:
+			timeout.Stop()
 			// Don't do anything, just exit the select{}
 		case <-quit:
 			return
@@ -122,5 +144,5 @@ func main() {
 	if isHarvestingEnabled {
 		beginHarvest()
 	}
-	server.Launch()
+	webServer.Launch()
 }

@@ -1,12 +1,17 @@
 package drivers
 
-type FeedName string
-type RssFeed string
+import (
+	"net/http"
+)
 
 type IDriver interface {
+	// Scrapes and persists posts from the website. (Run periodically by the mainloop)
 	Harvest() error
-	// MarkForPublishing() error
-	// GetFeed(feedname FeedName) (RssFeed, error)
+
+	// Return the path that the driver's publishing handler will handle, e.g. "/reddit/"
+	GetBaseUrlPath() string
+	GetFeeds() []Feed
+	GetHttpHandler() http.Handler
 }
 
 // --------------------------------------
@@ -21,50 +26,11 @@ type ISourceConfig interface {
 	GetSourceConfigId() SourceConfigId
 }
 
-/*
-
-
 // --------------------------------------
 
-// FilterCriteria is a DO that contains the parameters used for filtering persisted data.
-// It will typically be wrapped + extended to add information about (for example)
-// a specific subreddit, a twitter account + "is RT vs regular tweet"
-type FilterCriteria struct {
-	Percentile   float64
-	MaxPostCount int
-}
-
-// Again, trivial interface+implementation to allow type checking when the above is included
-// anonymously in implementations.
-type IFilterCriteria interface {
-	GetPercentile() float64
-}
-
-func (fc *FilterCriteria) GetPercentile() float64 {
-	return fc.Percentile
-}
-
-// --------------------------------------
-
-type FeedName string
-
+// Feed is a data object returned by a Driver to describe a feed.
+// It's used by the HTTP server to construct links to a specific feed.
 type Feed struct {
-	Name           FeedName
-	Description    string
-	driver         IDriver
-	SourceConfigs  []ISourceConfig
-	SourceLastRun  map[SourceConfigId]SourceLastRun
-	FilterCriteria []IFilterCriteria
+	Name        string
+	Description string
 }
-
-func (this *Feed) ScrapePosts(config ISourceConfig, startDate, endDate uint64) (err error) {
-	return this.driver.ScrapePosts(config, startDate, endDate)
-}
-
-func (this *Feed) FilterByCriteria() (err error) {
-	for _, criteria := range this.FilterCriteria {
-		this.driver.FilterByCriteria(criteria)
-	}
-}
-
-*/

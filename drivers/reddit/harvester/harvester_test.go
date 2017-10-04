@@ -1,6 +1,7 @@
 package reddit
 
 import (
+	"database/sql"
 	"github.com/coverprice/contentscraper/config"
 	"github.com/coverprice/contentscraper/database"
 	"github.com/coverprice/contentscraper/drivers"
@@ -8,6 +9,7 @@ import (
 	scrape "github.com/coverprice/contentscraper/drivers/reddit/scraper"
 	"github.com/coverprice/contentscraper/drivers/reddit/types"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -19,9 +21,7 @@ func TestHarvesterRetrievesAndStoresPosts(t *testing.T) {
 	}
 	defer testDb.Cleanup()
 
-	bakingTime_s = uint64(60 * 60) // Set this to just 1 hour.
-
-	// set up harvester
+	log.SetLevel(log.DebugLevel)
 	var harvester = getSut(t, testDb.DbConn)
 
 	// add a source
@@ -39,23 +39,19 @@ func TestHarvesterRetrievesAndStoresPosts(t *testing.T) {
 	t.Log("Harvest complete")
 
 	// verify that the database has posts
-	row, err := testDb.DbConn.GetFirstRow(
-		`SELECT COUNT(*) AS cnt
+	var cnt int
+	err = testDb.DbConn.QueryRow(
+		`SELECT COUNT(*)
          FROM redditpost`,
-	)
+	).Scan(&cnt)
 	if err != nil {
 		t.Error("Could not retrieve the count of posts")
-	}
-	var cnt int64
-	var ok bool
-	if cnt, ok = (*row)["cnt"].(int64); !ok {
-		t.Error("Row count could not be converted to an int64")
 	}
 	require.NotEqual(t, 0, cnt, "Gathered no posts")
 	t.Logf("Harvested %d posts", cnt)
 }
 
-func getSut(t *testing.T, dbconn *database.DbConn) *Harvester {
+func getSut(t *testing.T, dbconn *sql.DB) *Harvester {
 	var conf *config.Config
 	var err error
 
@@ -77,14 +73,14 @@ func getSut(t *testing.T, dbconn *database.DbConn) *Harvester {
 	if sourceLastRunService, err = drivers.NewSourceLastRunService(dbconn); err != nil {
 		t.Error("Could not initialize SourceLastRunService: ", err)
 	}
-	// Set this to just 1 hour so that we don't scrape a whole week
-	// for the test.
-	sourceLastRunService.DefaultLastRunInterval_s = uint64(60 * 60)
 
 	var harvester *Harvester
 	harvester, err = NewHarvester(scraper, persistence, sourceLastRunService)
 	if err != nil {
 		t.Error("Could not initialize Harvester: ", err)
 	}
+	// Reduce the defaults so the test completes within a reasonable time limit.
+	harvester.MaxPagesToScrape = 2
+
 	return harvester
 }
