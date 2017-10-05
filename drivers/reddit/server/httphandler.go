@@ -52,7 +52,7 @@ func (this HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	feedname := values.Get("feed")
 	feed, ok := this.feeds[feedname]
 	if !ok {
-		log.Error("Unknown reddit feed name: ", feedname)
+		log.Errorf("Unknown reddit feed name: '%s'", feedname)
 		http.NotFound(w, r)
 		return
 	}
@@ -66,6 +66,6 @@ func (this HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request. Cannot parse page number", 500)
 		return
 	}
-
+	log.Debugf("Received request for feed '%s', page %d", feedname, pagenum)
 	this.requestHandler.HandleFeed(&feed, pagenum, w)
 }

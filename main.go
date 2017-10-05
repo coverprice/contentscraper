@@ -122,7 +122,7 @@ func harvestLoop(quit chan bool) {
 			}
 		}
 
-		log.Debug("Harvest complete. Waiting for %d minutes...", harvestInterval)
+		log.Debugf("Harvest complete. Waiting for %d minutes...", harvestInterval)
 		if !timeout.Stop() {
 			<-timeout.C
 		}

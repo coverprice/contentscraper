@@ -2,32 +2,26 @@ package server
 
 import (
 	"github.com/coverprice/contentscraper/drivers"
-	log "github.com/sirupsen/logrus"
-	"html/template"
+	"github.com/coverprice/contentscraper/server/htmlutil"
+	// log "github.com/sirupsen/logrus"
 	"net/http"
+	"strings"
 )
 
 var indexTemplateStr = `
-    <!DOCTYPE html>
-    <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>{{.Title}}</title>
-        </head>
-        <body>
-            <h1>{{.Title}}</h1>
-            <ul>
-                {{range .DriverFeeds}}
-                    <li>
-                        <a href="{{.BaseUrl}}/?feed={{.Feed.Name}}">{{.Feed.Name}} - {{.Feed.Description}}</a>
-                    </li>
-                {{end}}
-            </ul>
-        </body>
-    </html>
+    {{define "title"}}Home{{end}}
+    {{define "content"}}
+    <div class="list-group">
+        {{range .DriverFeeds}}
+            <div class="list-group-item">
+                <a href="{{.BaseUrl}}/?feed={{.Feed.Name}}">{{.Feed.Name}} - {{.Feed.Description}}</a>
+            </div>
+        {{end}}
+    </div>
+    {{end}}
 `
 
-var indexTempl = template.Must(template.New("index").Parse(indexTemplateStr))
+var indexTempl = htmlutil.ParseTemplate(indexTemplateStr)
 
 // Verify that indexHandler implements http.Handler interface
 var _ http.Handler = &indexHandler{}
@@ -51,7 +45,7 @@ func (this indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var allfeeds []driverFeed
 	for _, driver := range this.server.Drivers {
-		var baseUrl = driver.GetBaseUrlPath()
+		var baseUrl = strings.TrimRight(driver.GetBaseUrlPath(), "/")
 		for _, feed := range driver.GetFeeds() {
 			allfeeds = append(allfeeds, driverFeed{
 				BaseUrl: baseUrl,
@@ -61,15 +55,16 @@ func (this indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := struct {
-		Title       string
+		Title string
+		htmlutil.Breadcrumbs
 		DriverFeeds []driverFeed
 	}{
-		Title:       "Content Scraper",
+		Title: "Content Scraper",
+		Breadcrumbs: []htmlutil.Breadcrumb{
+			htmlutil.NewBreadcrumb("Home", "/"),
+		},
 		DriverFeeds: allfeeds,
 	}
 
-	err := indexTempl.Execute(w, data)
-	if err != nil {
-		log.Fatal("Failed to execute index.html template:", err)
-	}
+	htmlutil.RenderTemplate(w, indexTempl, data)
 }

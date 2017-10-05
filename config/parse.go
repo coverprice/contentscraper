@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	media_type_text  = "text"
-	media_type_image = "image"
+	MEDIA_TYPE_TEXT  = "text"
+	MEDIA_TYPE_IMAGE = "image"
 )
 
 type Config struct {
@@ -52,12 +52,12 @@ func (this RedditFeed) Validate() (err error) {
 	if this.Description == "" {
 		return fmt.Errorf("Empty feed description")
 	}
-	if !(this.Media == media_type_image || this.Media == media_type_text) {
+	if !(this.Media == MEDIA_TYPE_IMAGE || this.Media == MEDIA_TYPE_TEXT) {
 		return fmt.Errorf(
 			"Invalid media type: '%s', must be one of '%s' or '%s'",
 			this.Media,
-			media_type_image,
-			media_type_text,
+			MEDIA_TYPE_IMAGE,
+			MEDIA_TYPE_TEXT,
 		)
 	}
 	return nil
@@ -210,7 +210,7 @@ func parseFromString(configblob string) (conf *Config, err error) {
 		}
 
 		if redditfeed.Media == "" {
-			conf.Reddit.Feeds[idx].Media = media_type_text
+			conf.Reddit.Feeds[idx].Media = MEDIA_TYPE_TEXT
 		}
 		for subidx, subreddit := range redditfeed.Subreddits {
 			if subreddit.Percentile == 0 {

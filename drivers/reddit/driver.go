@@ -28,7 +28,7 @@ type RedditDriver struct {
 
 func NewRedditDriver(
 	harvesterDbconn *sql.DB,
-	publisherDbconn *sql.DB,
+	viewerDbconn *sql.DB,
 	conf *config.Config,
 	sourceLastRunService *drivers.SourceLastRunService,
 ) (driver *RedditDriver, err error) {
@@ -37,22 +37,26 @@ func NewRedditDriver(
 		return
 	}
 
-	var persistence *persist.Persistence
-	if persistence, err = persist.NewPersistence(harvesterDbconn); err != nil {
+	var persistenceHarvester *persist.Persistence
+	if persistenceHarvester, err = persist.NewPersistence(harvesterDbconn); err != nil {
 		return
 	}
 
 	var harvester *harvest.Harvester
 	harvester, err = harvest.NewHarvester(
 		scraper,
-		persistence,
+		persistenceHarvester,
 		sourceLastRunService,
 	)
 	if err != nil {
 		return
 	}
 
-	htmlViewerRequestHandler := server.NewHtmlViewerRequestHandler(publisherDbconn)
+	var persistenceViewer *persist.Persistence
+	if persistenceViewer, err = persist.NewPersistence(viewerDbconn); err != nil {
+		return
+	}
+	htmlViewerRequestHandler := server.NewHtmlViewerRequestHandler(persistenceViewer)
 	httpHandler := server.NewHttpHandler(htmlViewerRequestHandler)
 
 	for _, feed := range conf.Reddit.Feeds {

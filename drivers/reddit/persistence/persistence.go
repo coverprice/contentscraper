@@ -3,6 +3,7 @@ package persistence
 import (
 	"database/sql"
 	"github.com/coverprice/contentscraper/drivers/reddit/types"
+	log "github.com/sirupsen/logrus"
 )
 
 type Persistence struct {
@@ -70,6 +71,12 @@ func (this *Persistence) initTables() (err error) {
         ;
         CREATE INDEX IF NOT EXISTS
             reddit_time_created ON redditpost(time_created)
+        ;
+        CREATE INDEX IF NOT EXISTS
+            reddit_time_stored ON redditpost(time_stored)
+        ;
+        CREATE INDEX IF NOT EXISTS
+            reddit_id ON redditpost(id)
     `)
 	return
 }
@@ -92,29 +99,35 @@ func (this *Persistence) StorePost(
 	err error,
 ) {
 	var postExists int
+	log.Debugf("Checking if post exists")
 	if err = this.searchPostByPk.QueryRow(post.Id, post.SubredditId).Scan(&postExists); err != nil {
 		return
 	}
 	if postExists == 0 {
+		log.Debugf("Post does not exist")
 		// Does not exist when searching by Primary Key.
 
 		// If this post has an image URL, verify that it doesn't already
 		// exist elsewhere.
 		if post.Url != "" {
+			log.Debugf("Searching by URL")
 			if err = this.searchPostByUrl.QueryRow(post.Url).Scan(&postExists); err != nil {
 				return
 			}
 			if postExists != 0 {
+				log.Debugf("Post URL already exists")
 				return STORERESULT_SKIPPED, nil
 			}
 		}
 		// We need to insert this post
+		log.Debugf("Inserting post")
 		if err = this.insertPost(post); err != nil {
 			return
 		}
 		return STORERESULT_NEW, nil
 	}
 	// Exists, update
+	log.Debugf("Updating post")
 	if err = this.updatePost(post); err != nil {
 		return
 	}
@@ -209,6 +222,7 @@ func (this *Persistence) GetPosts(
             , name
             , permalink
             , time_created
+            , time_stored
             , is_active
             , is_sticky
             , score
@@ -220,6 +234,7 @@ func (this *Persistence) GetPosts(
         FROM redditpost
         ` + where_clause
 	if rows, err = this.dbconn.Query(sql, params...); err != nil {
+		log.Debugf("Error calling SQL %v", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -232,6 +247,7 @@ func (this *Persistence) GetPosts(
 			&redditPost.Name,
 			&redditPost.Permalink,
 			&redditPost.TimeCreated,
+			&redditPost.TimeStored,
 			&redditPost.IsActive,
 			&redditPost.IsSticky,
 			&redditPost.Score,
@@ -253,5 +269,6 @@ func (this *Persistence) GetPosts(
 		*/
 		posts = append(posts, redditPost)
 	}
+	log.Debugf("Retrieved %d posts", len(posts))
 	return posts, nil
 }
