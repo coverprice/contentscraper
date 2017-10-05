@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"io"
 	"reflect"
+	"strings"
 )
 
 type Breadcrumbs []Breadcrumb
@@ -49,11 +50,9 @@ var baseTemplateStr = `
 
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <!-- Commented out until we actually need it.
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js" integrity="sha384-h0AbiXch4ZDo7tp9hKZ4TsHbi047NrKGLO3SEJAg45jXxnGIfYzk4Si90RDIqNm1" crossorigin="anonymous"></script>
-    -->
     {{block "js" .}}{{end}}
   </body>
 </html>
@@ -70,10 +69,17 @@ func hasField(v interface{}, name string) bool {
 	return rv.FieldByName(name).IsValid()
 }
 
+func hasSuffix(s, suffix string) bool {
+	return strings.HasSuffix(s, suffix)
+}
+
 var (
 	baseTemplate = template.Must(
 		template.New("base").Funcs(
-			template.FuncMap{"hasField": hasField},
+			template.FuncMap{
+				"hasField":  hasField,
+				"hasSuffix": hasSuffix,
+			},
 		).Parse(baseTemplateStr),
 	)
 )
