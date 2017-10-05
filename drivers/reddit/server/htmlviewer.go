@@ -9,8 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"html/template"
 	"net/http"
-	"net/url"
-	"regexp"
 	"strings"
 )
 
@@ -213,76 +211,7 @@ func annotatePost(p types.RedditPost) annotatedPost {
 	a = annotatedPost{RedditPost: p}
 
 	if a.Url != "" {
-		a.ImageUrl = makeImageViewable(a.Url)
+		a.ImageUrl = htmlutil.RealImageUrl(a.Url)
 	}
 	return a
-}
-
-// Note: "(?i)" means set the "i" flag (case-insensitive)
-// "(?:" begins a non-capturing group)
-var standardGraphicsSuffixesRe = regexp.MustCompile(`(?i)\.(?:gif|png|jpe?g|mp4|webm)$`)
-
-// isDomain returns true if the candidate hostname == or is sub-ordinate to the given domain,
-// e.g. if domain is "foo.com" then "foo.com" and "sub.foo.com" will match, but "barfoo.com" won't.
-func isDomain(domain, candidate string) bool {
-	return isMatch(`(?i)(?:^|\.)`+domain+`$`, candidate)
-}
-func isMatch(pattern, candidate string) bool {
-	result, err := regexp.MatchString(pattern, candidate)
-	if err != nil {
-		log.Fatal("Invalid pattern: %s", pattern)
-	}
-	return result
-}
-
-func makeImageViewable(rawurl string) string {
-	u, err := url.Parse(rawurl)
-	if err != nil {
-		log.Warningf("Could not parse the URL: '%s' %v", rawurl, err)
-		return ""
-	}
-
-	// Let's make pattern matching a littler easier:
-	u.Scheme = strings.ToLower(u.Scheme)
-	host := strings.ToLower(u.Host)
-	if strings.Index(host, ":") != -1 {
-		host = host[:strings.Index(host, ":")]
-	}
-	path := strings.ToLower(u.Path)
-
-	if !(u.Scheme == "http" || u.Scheme == "https") {
-		log.Warningf("Non HTTP Scheme in URL: '%s", rawurl)
-		return ""
-	}
-
-	if standardGraphicsSuffixesRe.MatchString(path) {
-		// This is a standard-looking image URL, return verbatim.
-		return rawurl
-	}
-
-	// Now to handle all the crazy special cases!
-
-	// http://i.imgur.com/foooo.gifv --> http://i.imgur.com/foooo.mp4
-	if isDomain("imgur.com", host) && isMatch(`\.gifv$`, path) {
-		u.Host = "i.imgur.com"
-		u.Path = strings.TrimSuffix(u.Path, ".gifv") + ".mp4"
-		return u.String()
-	}
-
-	// http://gfycat.com/SomeId --> https://fat.gfycat.com/SomeId.webm or https://giant.gfycat.com/SomeId.mp4
-	if isDomain("gfycat.com", host) {
-		u.Host = "fat.gfycat.com"
-		u.Path = u.Path + ".webm"
-		return u.String()
-	}
-
-	// http://imgur.com/foooo --> http://i.imgur.com/2iiK88I.jpg
-	if isDomain("imgur.com", host) && isMatch(`^/[[:alnum:]]+$`, u.Path) {
-		u.Host = "i.imgur.com"
-		u.Path = u.Path + ".jpg"
-		return u.String()
-	}
-
-	log.Infof("Couldn't work out the graphics link for this URL: '%s'", rawurl)
-	return ""
 }
