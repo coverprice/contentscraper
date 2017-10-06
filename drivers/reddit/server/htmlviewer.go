@@ -6,9 +6,10 @@ import (
 	persist "github.com/coverprice/contentscraper/drivers/reddit/persistence"
 	"github.com/coverprice/contentscraper/drivers/reddit/types"
 	"github.com/coverprice/contentscraper/server/htmlutil"
-	log "github.com/sirupsen/logrus"
-	"html/template"
+	"github.com/coverprice/contentscraper/toolbox"
+	// log "github.com/sirupsen/logrus"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -69,6 +70,17 @@ var htmlImageTemplateStr = `
         Reddit Feed: {{.Title}}
         <small class="text-muted">{{.Description}}</small>
     </h4>
+
+    <nav>
+        <ul class="pagination">
+        {{range .Pagelinks}}
+            <li class="page-item{{if not .IsEnabled}} disabled{{end}} {{if .IsHighlighted}} active{{end}}">
+                <a class="page-link" href="{{.Link}}" {{if not .IsEnabled}} tabindex="-1"{{end}}>{{.Text}}</a>
+            </li>
+        {{end}}
+        </ul>
+    </nav>
+
     <div class="container-fluid">
         {{range .Posts}}
         <div class="row">
@@ -81,15 +93,18 @@ var htmlImageTemplateStr = `
                             <small class="text-muted">{{.SubredditName}}</small>
                         </div>
                     </div>
+                    {{if not (eq .Url "")}}
                     <div class="row">
                         <div class="col">
                             <a href="{{.Url}}">
-                                {{if hasSuffix .ImageUrl ".mp4"}}
-                                    <video playsinline autoplay loop controls>
+                                {{if not (eq .VideoHtml "")}}
+                                    <div style="position:relative;padding-bottom:54%"><iframe src="https://gfycat.com/ifr{{.VideoHtml}}" frameborder="0" scrolling="no" width="100%" height="100%" style="position:absolute;top:0;left:0" allowfullscreen></iframe></div>
+                                {{else if hasSuffix .ImageUrl ".mp4"}}
+                                    <video playsinline autoplay loop controls class="postimage">
                                         <source id="mp4Source" src="{{.ImageUrl}}" type="video/mp4" />
                                     </video>
                                 {{else if hasSuffix .ImageUrl ".webm"}}
-                                    <video playsinline autoplay loop controls>
+                                    <video playsinline autoplay loop controls class="postimage">
                                         <source id="webmSource" src="{{.ImageUrl}}" type="video/webm" />
                                     </video>
                                 {{else if not (eq .ImageUrl "")}}
@@ -101,6 +116,7 @@ var htmlImageTemplateStr = `
                             </a>
                         </div>
                     </div>
+                    {{end}}
                 </div>
             </div>
         </div>
@@ -108,33 +124,19 @@ var htmlImageTemplateStr = `
     </div>
     {{end}}
 `
-var htmlTextTemplateStr = `
-    {{define "title"}}Reddit Feed - {{.Title}}{{end}}
-    {{define "content"}}
-    <h4>
-        Reddit Feed: {{.Title}}
-        <small class="text-muted">{{.Description}}</small>
-    </h4>
-    <div class="container-fluid">
-        {{range .Posts}}
-            <div class="row">
-                <div class="col-2">
-                    {{.Score}}
-                </div>
-                <div class="col">
-                    {{.Title}}
-                </div>
-            </div>
-        {{end}}
-    </div>
-    {{end}}
-`
-var htmlTextTempl = htmlutil.ParseTemplate(htmlTextTemplateStr)
 var htmlImageTempl = htmlutil.ParseTemplate(htmlImageTemplateStr)
+
+type pagelink struct {
+	Text          string
+	Link          string
+	IsEnabled     bool
+	IsHighlighted bool
+}
 
 type annotatedPost struct {
 	types.RedditPost
-	ImageUrl string
+	ImageUrl  string
+	VideoHtml string
 }
 
 func (this *HtmlViewerRequestHandler) HandleFeed(
@@ -142,22 +144,51 @@ func (this *HtmlViewerRequestHandler) HandleFeed(
 	pagenum int,
 	w http.ResponseWriter,
 ) {
-	posts, err := this.getPosts(feed, pagenum)
+	if pagenum == 0 {
+		pagenum = 1
+	}
+
+	posts, err := this.getPosts(feed)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Internal error retrieving posts for feed: %s %v", feed.Name, err), 500)
 		return
 	}
 
+	itemsPerPage := 20
+	startIdx := itemsPerPage * (pagenum - 1)
+
+	if startIdx >= len(posts) || startIdx+itemsPerPage >= len(posts) {
+		// Out of bounds.
+		posts = []types.RedditPost{}
+	} else {
+		posts = posts[startIdx : startIdx+itemsPerPage]
+	}
+
 	var annotatedPosts []annotatedPost
 	for _, post := range posts {
-		annotatedPosts = append(annotatedPosts, annotatePost(post))
+		a := annotatedPost{RedditPost: post}
+		if a.Url != "" {
+			a.ImageUrl = htmlutil.RealImageUrl(a.Url)
+			if a.ImageUrl == "" {
+				u, err := url.Parse(a.Url)
+				if err == nil {
+					// http://gfycat.com/SomeId --> https://fat.gfycat.com/SomeId.webm or https://giant.gfycat.com/SomeId.mp4
+					if toolbox.InDomain("gfycat.com", strings.ToLower(u.Host)) {
+						a.VideoHtml = u.Path
+					}
+				}
+			}
+		}
+
+		annotatedPosts = append(annotatedPosts, a)
 	}
 
 	data := struct {
 		Title       string
 		Description string
 		htmlutil.Breadcrumbs
-		Posts []annotatedPost
+		Posts     []annotatedPost
+		Pagelinks []pagelink
 	}{
 		Title:       feed.Name,
 		Description: feed.Description,
@@ -165,53 +196,43 @@ func (this *HtmlViewerRequestHandler) HandleFeed(
 			htmlutil.NewBreadcrumb("Home", "/"),
 			htmlutil.NewBreadcrumb(feed.Name, "/"),
 		},
-		Posts: annotatedPosts,
+		Posts:     annotatedPosts,
+		Pagelinks: getPagelinks(feed.Name, pagenum),
 	}
-	var t *template.Template
-	switch feed.Media {
-	case config.MEDIA_TYPE_TEXT:
-		t = htmlTextTempl
-		log.Debug("Using Text media template")
-	case config.MEDIA_TYPE_IMAGE:
-		t = htmlImageTempl
-		log.Debug("Using Image media template")
-	default:
-		log.Fatal(fmt.Sprintf("Unsupported Media type: %s", feed.Media))
-	}
-	htmlutil.RenderTemplate(w, t, data)
+	htmlutil.RenderTemplate(w, htmlImageTempl, data)
 }
 
-func (this *HtmlViewerRequestHandler) getPosts(
-	feed *config.RedditFeed,
-	pagenum int,
-) (posts []types.RedditPost, err error) {
-	if pagenum == 0 {
-		pagenum = 1
+func getPagelinks(feedname string, pagenum int) (links []pagelink) {
+	link := pagelink{
+		Text:          "Previous",
+		Link:          ConstructUrl(&feedname, pagenum-1),
+		IsEnabled:     true,
+		IsHighlighted: false,
 	}
-	limit := 10
-	offset := limit * (pagenum - 1)
-	whereClause := `
-        WHERE subreddit_name IN ('%s')
-          AND is_active = 1
-        ORDER BY time_stored DESC, id
-        LIMIT $a
-        OFFSET $b
-    `
-	var subredditNames []string
-	for _, subreddit := range feed.Subreddits {
-		subredditNames = append(subredditNames, subreddit.Name)
+	if pagenum == 1 {
+		link.IsEnabled = false
 	}
-	whereClause = fmt.Sprintf(whereClause, strings.Join(subredditNames, "', '"))
-	log.Debug("Using whereclause: %s      LIMIT %d OFFSET %d", whereClause, limit, offset)
-	return this.persistence.GetPosts(whereClause, limit, offset)
-}
+	links = append(links, link)
 
-func annotatePost(p types.RedditPost) annotatedPost {
-	var a annotatedPost
-	a = annotatedPost{RedditPost: p}
-
-	if a.Url != "" {
-		a.ImageUrl = htmlutil.RealImageUrl(a.Url)
+	for i := -2; i < 3; i++ {
+		pn := pagenum + i
+		if pn <= 0 {
+			continue
+		}
+		link = pagelink{
+			Text:          fmt.Sprintf("%d", pn),
+			Link:          ConstructUrl(&feedname, pn),
+			IsEnabled:     true,
+			IsHighlighted: (pagenum == pn),
+		}
+		links = append(links, link)
 	}
-	return a
+	link = pagelink{
+		Text:          "Next",
+		Link:          ConstructUrl(&feedname, pagenum+1),
+		IsEnabled:     true,
+		IsHighlighted: false,
+	}
+	links = append(links, link)
+	return
 }

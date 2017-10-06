@@ -2,8 +2,10 @@ package persistence
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/coverprice/contentscraper/drivers/reddit/types"
 	log "github.com/sirupsen/logrus"
+	"strings"
 )
 
 type Persistence struct {
@@ -168,8 +170,8 @@ func (this *Persistence) insertPost(post *types.RedditPost) (err error) {
 		post.Id,
 		post.Name,
 		post.Permalink,
-		int64(post.TimeCreated),
-		int64(post.TimeStored),
+		uint64(post.TimeCreated),
+		uint64(post.TimeStored),
 		post.IsActive,
 		post.IsSticky,
 		post.Score,
@@ -271,4 +273,70 @@ func (this *Persistence) GetPosts(
 	}
 	log.Debugf("Retrieved %d posts", len(posts))
 	return posts, nil
+}
+
+// Gets the score of the Redditpost at the given percentile (where 100% means all posts,
+// 90% means 90% of posts, etc.
+func (this *Persistence) GetScoreAtPercentile(
+	minTime uint64,
+	subredditName string,
+	percentile float64,
+) (score int, err error) {
+	sql := `
+        SELECT COUNT(*) AS cnt
+        FROM redditpost
+        WHERE subreddit_name = $a
+          AND time_stored >= $b
+          AND is_active = 1
+    `
+
+	// If getting 100% of posts, then the lowest score is 0.
+	// (Technically a post can have a negative score, but we don't want to see those anyway)
+	if percentile >= 100.0 {
+		return 0, nil
+	}
+
+	var cnt int
+	if err = this.dbconn.QueryRow(sql, subredditName, minTime).Scan(&cnt); err != nil {
+		return
+	}
+	if cnt == 0 {
+		// No posts
+		return 0, nil
+	}
+
+	sql = `
+        SELECT score
+        FROM redditpost
+        WHERE subreddit_name = $a
+          AND time_stored >= $b
+          AND is_active = 1
+        ORDER BY score DESC
+        LIMIT 1
+        OFFSET $c
+    `
+	var offsetRows = int(percentile * float64(cnt) / 100.0)
+	err = this.dbconn.QueryRow(sql, subredditName, minTime, offsetRows).Scan(&score)
+	return
+}
+
+func (this *Persistence) GetPostsForSubredditScores(
+	minTime uint64,
+	subredditMinScores map[string]int,
+) ([]types.RedditPost, error) {
+	var criteria []string
+	for subredditName, minScore := range subredditMinScores {
+		criteria = append(criteria,
+			fmt.Sprintf("(subreddit_name = '%s' AND score >= %d)", subredditName, minScore))
+	}
+
+	whereClause := `
+        WHERE (%s)
+          AND time_stored >= $a
+          AND is_active = 1
+        ORDER BY time_stored DESC, id
+        LIMIT 3000
+    `
+	whereClause = fmt.Sprintf(whereClause, strings.Join(criteria, " OR "))
+	return this.GetPosts(whereClause, minTime)
 }

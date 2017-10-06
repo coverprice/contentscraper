@@ -33,6 +33,10 @@ type RedditSecrets struct {
 	Password     string `json:"password"`
 }
 
+// RedditFeed describes the filtering configuration for feeds from Reddit sources, i.e. 1-many Subreddits.
+// It's expected that subreddits primarily share the same media type (text or graphics). E.g. a "images"
+// feed might include image-heavy subreddits like "funny" and "gifs", and a "text" feed might include
+// title-heavy subreddits like "legaladvice" or "showerthoughts".
 type RedditFeed struct {
 	Name                 string      `json:"name"`
 	Description          string      `json:"description"`
@@ -63,10 +67,12 @@ func (this RedditFeed) Validate() (err error) {
 	return nil
 }
 
+// Subreddit describes the filtering configuration for specific subreddit, e.g. /r/funny.
+// It is an element of the RedditFeed structure.
 type Subreddit struct {
-	Name          string  `json:"name"`
-	Percentile    float64 `json:"percentile"`
-	MaxDailyPosts int     `json:"max_daily_posts"`
+	Name          string  `json:"name"`            // The subreddit name, without the leading '/r/'
+	Percentile    float64 `json:"percentile"`      // Percent of posts to include from this subreddit (0-100)
+	MaxDailyPosts int     `json:"max_daily_posts"` // Maximum # of posts to include per day from this subreddit.
 }
 
 func (this Subreddit) Validate() (err error) {

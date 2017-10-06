@@ -57,13 +57,6 @@ func RealImageUrl(rawurl string) string {
 		return u.String()
 	}
 
-	// http://gfycat.com/SomeId --> https://fat.gfycat.com/SomeId.webm or https://giant.gfycat.com/SomeId.mp4
-	if toolbox.InDomain("gfycat.com", host) {
-		u.Host = "fat.gfycat.com"
-		u.Path = u.Path + ".webm"
-		return u.String()
-	}
-
 	log.Debugf("Couldn't work out the graphics link for this URL: '%s'", rawurl)
 	return ""
 }

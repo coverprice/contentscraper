@@ -15,10 +15,6 @@ import (
 // Verify that RedditDriver satisfies the drivers.IDriver interface.
 var _ drivers.IDriver = &RedditDriver{}
 
-const (
-	baseUrlPath = "/reddit/"
-)
-
 // RedditDriver implements drivers.IDriver. It follows the Facade pattern
 // and delegates the work of the interface to subordinate classes.
 type RedditDriver struct {
@@ -73,7 +69,7 @@ func NewRedditDriver(
 }
 
 func (this *RedditDriver) GetBaseUrlPath() string {
-	return baseUrlPath
+	return server.GetBaseUrlPath()
 }
 
 func (this *RedditDriver) GetFeeds() []drivers.Feed {

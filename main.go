@@ -27,7 +27,7 @@ var (
 )
 
 func init() {
-	flag.IntVar(&harvestInterval, "harvest-interval", 60, "Minutes to wait between harvest runs")
+	flag.IntVar(&harvestInterval, "harvest-interval", 60*6, "Minutes to wait between harvest runs")
 	flag.StringVar(&logLevelFlag, "log-level", "INFO", "One of DEBUG, INFO, WARN, ERROR, FATAL, PANIC")
 	flag.BoolVar(&isHarvestingEnabled, "enable-harvest", true, "False to disable harvesting posts")
 	flag.IntVar(&port, "port", 8080, "Port to listen on")
