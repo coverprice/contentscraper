@@ -6,11 +6,12 @@ import (
 	persist "github.com/coverprice/contentscraper/drivers/reddit/persistence"
 	"github.com/coverprice/contentscraper/drivers/reddit/types"
 	"github.com/coverprice/contentscraper/server/htmlutil"
-	"github.com/coverprice/contentscraper/toolbox"
-	// log "github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"net/http"
-	"net/url"
-	"strings"
+)
+
+const (
+	NUM_ITEMS_PER_PAGE = 20
 )
 
 // Verify that HtmlViewerRequestHandler implements IRequestHandler interface
@@ -28,21 +29,6 @@ func NewHtmlViewerRequestHandler(persistence *persist.Persistence) *HtmlViewerRe
 
 var htmlImageTemplateStr = `
     {{define "title"}}Reddit Feed - {{.Title}}{{end}}
-    {{define "style"}}
-    <style>
-    html, body, .mysection {
-        width:100%;
-        height:100%;
-        margin:0;
-    }
-    .myimg {
-        width:auto;
-        height:auto;
-        max-width:100%;
-        max-height:70%;
-    }
-    </style>
-    {{end}}
     {{define "js"}}
 	<script>
     // Returns the scale factor required to get the image dimensions to fit into the given window
@@ -51,7 +37,7 @@ var htmlImageTemplateStr = `
 	    let scale_factor = window_w / img_w;
         return (scale_factor * img_h > window_h) ? window_h / img_h : scale_factor;
     }
-  		// Scale down images that are wider than the page so they fit on the page.
+  	// Scale down images that are wider than the page so they fit on the page.
 	$(document).ready(function() {
 	    $('.postimage').each(function(idx, el) {
             let el_w = el.naturalWidth || el.videoWidth;
@@ -62,15 +48,41 @@ var htmlImageTemplateStr = `
             el.style.width = Math.floor(scale_factor * el_w) + "px";
             el.style.height = Math.floor(scale_factor * el_h) + "px";
 		})
-	});
+    });
+
+    let itemOffset = 0;
+    let numItemsPerPage = {{.NumItemsPerPage}};
+    let pageNum = {{.PageNum}};
+
+    function scrollToItem() {
+        window.scrollTo(0, $('#item' + itemOffset).offset().top)
+    }
+    $(document).keypress(function(event) {
+        let key = String.fromCharCode(event.which)
+        if (key == "k") {               // Up
+            if (itemOffset > 0) {
+                itemOffset--
+                scrollToItem()
+            }
+        } else if (key == "j") {        // Down
+            if (itemOffset < numItemsPerPage - 1) {
+                itemOffset++
+                scrollToItem()
+            }
+        } else if (key == "h") {        // Previous
+            if (pageNum > 1) {
+                window.location = '{{.PreviousPagelink.Link}}'
+            }
+        } else if (key == "l") {        // Next
+            window.location = '{{.NextPagelink.Link}}'
+        } else {
+            return
+        }
+        event.preventDefault();
+    });
 	</script>
     {{end}}
-    {{define "content"}}
-    <h4>
-        Reddit Feed: {{.Title}}
-        <small class="text-muted">{{.Description}}</small>
-    </h4>
-
+    {{define "pagination"}}
     <nav>
         <ul class="pagination">
         {{range .Pagelinks}}
@@ -80,10 +92,18 @@ var htmlImageTemplateStr = `
         {{end}}
         </ul>
     </nav>
+    {{end}}
+    {{define "content"}}
+    <h4>
+        Reddit Feed: {{.Title}}
+        <small class="text-muted">{{.Description}}</small>
+    </h4>
+
+    {{template "pagination" .}}
 
     <div class="container-fluid">
-        {{range .Posts}}
-        <div class="row">
+        {{range $itemIndex, $post := .Posts}}
+        <div class="row" id="item{{$itemIndex}}">
             <div class="col">
                 <div class="container-fluid">
                     <div class="row">
@@ -93,24 +113,24 @@ var htmlImageTemplateStr = `
                             <small class="text-muted">{{.SubredditName}}</small>
                         </div>
                     </div>
-                    {{if not (eq .Url "")}}
+                    {{if .MediaLink}}
                     <div class="row">
                         <div class="col">
                             <a href="{{.Url}}">
-                                {{if not (eq .VideoHtml "")}}
-                                    <div style="position:relative;padding-bottom:54%"><iframe src="https://gfycat.com/ifr{{.VideoHtml}}" frameborder="0" scrolling="no" width="100%" height="100%" style="position:absolute;top:0;left:0" allowfullscreen></iframe></div>
-                                {{else if hasSuffix .ImageUrl ".mp4"}}
+                                {{if not (eq .MediaLink.Embed "")}}
+                                    {{.MediaLink.Embed}}
+                                {{else if hasSuffix .MediaLink.Url ".mp4"}}
                                     <video playsinline autoplay loop controls class="postimage">
-                                        <source id="mp4Source" src="{{.ImageUrl}}" type="video/mp4" />
+                                        <source src="{{.MediaLink.Url}}" type="video/mp4" />
                                     </video>
-                                {{else if hasSuffix .ImageUrl ".webm"}}
+                                {{else if hasSuffix .MediaLink.Url ".webm"}}
                                     <video playsinline autoplay loop controls class="postimage">
-                                        <source id="webmSource" src="{{.ImageUrl}}" type="video/webm" />
+                                        <source src="{{.MediaLink.Url}}" type="video/webm" />
                                     </video>
-                                {{else if not (eq .ImageUrl "")}}
-                                    <img src="{{.ImageUrl}}" class="img-fluid postimage">
+                                {{else if not (eq .MediaLink.Url "")}}
+                                    <img src="{{.MediaLink.Url}}" class="img-fluid postimage">
                                 {{else}}
-                                    {{.Url}}
+                                    {{.MediaLink.Url}}
                                     <small>[No preview available]</small>
                                 {{end}}
                             </a>
@@ -122,6 +142,9 @@ var htmlImageTemplateStr = `
         </div>
         {{end}}
     </div>
+
+    {{template "pagination" .}}
+
     {{end}}
 `
 var htmlImageTempl = htmlutil.ParseTemplate(htmlImageTemplateStr)
@@ -135,8 +158,7 @@ type pagelink struct {
 
 type annotatedPost struct {
 	types.RedditPost
-	ImageUrl  string
-	VideoHtml string
+	MediaLink *htmlutil.MediaLink
 }
 
 func (this *HtmlViewerRequestHandler) HandleFeed(
@@ -154,7 +176,7 @@ func (this *HtmlViewerRequestHandler) HandleFeed(
 		return
 	}
 
-	itemsPerPage := 20
+	itemsPerPage := NUM_ITEMS_PER_PAGE
 	startIdx := itemsPerPage * (pagenum - 1)
 
 	if startIdx >= len(posts) || startIdx+itemsPerPage >= len(posts) {
@@ -168,27 +190,24 @@ func (this *HtmlViewerRequestHandler) HandleFeed(
 	for _, post := range posts {
 		a := annotatedPost{RedditPost: post}
 		if a.Url != "" {
-			a.ImageUrl = htmlutil.RealImageUrl(a.Url)
-			if a.ImageUrl == "" {
-				u, err := url.Parse(a.Url)
-				if err == nil {
-					// http://gfycat.com/SomeId --> https://fat.gfycat.com/SomeId.webm or https://giant.gfycat.com/SomeId.mp4
-					if toolbox.InDomain("gfycat.com", strings.ToLower(u.Host)) {
-						a.VideoHtml = u.Path
-					}
-				}
+			if a.MediaLink, err = htmlutil.UrlToEmbedUrl(a.Url); err != nil {
+				log.Error("Error trying to convert post URL to MediaLink", err)
 			}
 		}
-
 		annotatedPosts = append(annotatedPosts, a)
 	}
 
+	pagelinks := getPagelinks(feed.Name, pagenum)
 	data := struct {
 		Title       string
 		Description string
 		htmlutil.Breadcrumbs
-		Posts     []annotatedPost
-		Pagelinks []pagelink
+		Posts            []annotatedPost
+		Pagelinks        []pagelink
+		PreviousPagelink pagelink
+		NextPagelink     pagelink
+		NumItemsPerPage  int
+		PageNum          int
 	}{
 		Title:       feed.Name,
 		Description: feed.Description,
@@ -196,8 +215,12 @@ func (this *HtmlViewerRequestHandler) HandleFeed(
 			htmlutil.NewBreadcrumb("Home", "/"),
 			htmlutil.NewBreadcrumb(feed.Name, "/"),
 		},
-		Posts:     annotatedPosts,
-		Pagelinks: getPagelinks(feed.Name, pagenum),
+		Posts:            annotatedPosts,
+		Pagelinks:        pagelinks,
+		PreviousPagelink: pagelinks[0], // Clunky, but necessary since arithmetic isn't possible in templates.
+		NextPagelink:     pagelinks[len(pagelinks)-1],
+		NumItemsPerPage:  itemsPerPage,
+		PageNum:          pagenum,
 	}
 	htmlutil.RenderTemplate(w, htmlImageTempl, data)
 }
