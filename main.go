@@ -9,8 +9,11 @@ import (
 	"github.com/coverprice/contentscraper/drivers"
 	"github.com/coverprice/contentscraper/drivers/reddit"
 	"github.com/coverprice/contentscraper/server"
+	"github.com/coverprice/contentscraper/toolbox"
 	//"github.com/davecgh/go-spew/spew"
 	log "github.com/sirupsen/logrus"
+	"path"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -20,6 +23,7 @@ var (
 	sourceDrivers       []drivers.IDriver
 	quitChannels        []chan bool
 	harvestInterval     int
+	logFilename         string
 	logLevelFlag        string
 	isHarvestingEnabled bool
 	webServer           *server.Server
@@ -28,7 +32,7 @@ var (
 
 func init() {
 	flag.IntVar(&harvestInterval, "harvest-interval", 60*6, "Minutes to wait between harvest runs")
-	flag.StringVar(&logLevelFlag, "log-level", "INFO", "One of DEBUG, INFO, WARN, ERROR, FATAL, PANIC")
+	flag.StringVar(&logFilename, "logfile", "", "Log to the given file. (absolute or relative to storage directory)")
 	flag.BoolVar(&isHarvestingEnabled, "enable-harvest", true, "False to disable harvesting posts")
 	flag.IntVar(&port, "port", 8080, "Port to listen on")
 }
@@ -36,14 +40,12 @@ func init() {
 func initialize() (err error) {
 	flag.Parse()
 
-	var logLevel log.Level
-	if logLevel, err = log.ParseLevel(logLevelFlag); err != nil {
-		log.Fatal("Invalid log level: '%s'", logLevel)
+	if logFilename != "" && !path.IsAbs(logFilename) {
+		logFilename = filepath.Join(config.StorageDir(), logFilename)
 	}
-	log.SetLevel(logLevel)
+	toolbox.InitLogging(logFilename)
 
 	var conf *config.Config
-
 	if conf, err = config.GetConfig(); err != nil {
 		return fmt.Errorf("Could not load/parse config file: %v", err)
 	}

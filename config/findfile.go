@@ -51,6 +51,10 @@ func init() {
 	configFilePaths = append(configFilePaths, storageDir)
 }
 
+func StorageDir() string {
+	return storageDir
+}
+
 func locateConfigFile() (filePath string, err error) {
 	if configFileName == "" {
 		// means use the default name & search paths
