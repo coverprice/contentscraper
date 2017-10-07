@@ -6,6 +6,7 @@ import (
 	"github.com/coverprice/contentscraper/toolbox"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 const (
@@ -20,23 +21,27 @@ var defaultPercentile int
 var defaultMaxDailyPosts int
 
 func init() {
-	home_dir, is_present := os.LookupEnv("HOME")
-	if !is_present {
-		panic("HOME environment variable not set")
-	}
-	storageDir = filepath.Join(home_dir, ".contentscraper")
-
-	if !toolbox.DoesDirExist(storageDir) {
-		if err := os.MkdirAll(storageDir, 0x755); err != nil {
-			panic(fmt.Sprintf("Could not make the directory %s", storageDir))
-		}
-	}
-
 	flag.StringVar(&configFileName, "config", "", fmt.Sprintf("Configuration file (default %s)", defaultConfigFileName))
 	flag.IntVar(&defaultPercentile, "default-percentile", 80, "Default filtering percentile")
 	flag.IntVar(&defaultMaxDailyPosts, "default-max-daily-posts", 100, "Default maximum daily posts")
-	configFilePaths = append(configFilePaths, ".")
-	configFilePaths = append(configFilePaths, "/etc")
+
+	storageBaseEnvVar := "HOME"
+	storageDirName := ".contentscraper"
+	if runtime.GOOS == "windows" {
+		storageBaseEnvVar = "LOCALAPPDATA"
+		storageDirName = "ContentScraper"
+	}
+	storageBase, is_present := os.LookupEnv(storageBaseEnvVar)
+	if !is_present {
+		panic(fmt.Sprintf("Environment variable '%s' not set", storageBaseEnvVar))
+	}
+	storageDir = filepath.Join(storageBase, storageDirName)
+	if !toolbox.DoesDirExist(storageDir) {
+		if err := os.MkdirAll(storageDir, 0x755); err != nil {
+			panic(fmt.Sprintf("Could not make the directory '%s'", storageDir))
+		}
+	}
+
 	configFilePaths = append(configFilePaths, storageDir)
 }
 
