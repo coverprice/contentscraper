@@ -1,7 +1,6 @@
 package toolbox
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -33,7 +32,5 @@ func FindFileInPaths(filename string, paths []string) (fullpath string, err erro
 			return fullpath, nil
 		}
 	}
-	return "", errors.New(
-		fmt.Sprintf("File %s not found anywhere in the paths: %s", filename, strings.Join(paths, " ")),
-	)
+	return "", fmt.Errorf("File %s not found anywhere in the paths: %s", filename, strings.Join(paths, ", "))
 }

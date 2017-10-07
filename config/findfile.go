@@ -7,12 +7,17 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 const (
-	defaultConfigFileName = "contentscraper.yaml"
-	databaseFileName      = "sqlite3.db"
+	databaseFileName = "sqlite3.db"
 )
+
+var defaultConfigFileNames = []string{
+	"contentscraper.yaml",
+	"contentscraper.yml",
+}
 
 var configFileName string    // filename (incl. relative or absolute path)
 var configFilePaths []string // If configFileName is relative, this list of paths is searched.
@@ -21,7 +26,8 @@ var defaultPercentile int
 var defaultMaxDailyPosts int
 
 func init() {
-	flag.StringVar(&configFileName, "config", "", fmt.Sprintf("Configuration file (default %s)", defaultConfigFileName))
+	flag.StringVar(&configFileName, "config", "", fmt.Sprintf(
+		"Configuration file (default: %s)", strings.Join(defaultConfigFileNames, ", ")))
 	flag.IntVar(&defaultPercentile, "default-percentile", 80, "Default filtering percentile")
 	flag.IntVar(&defaultMaxDailyPosts, "default-max-daily-posts", 100, "Default maximum daily posts")
 
@@ -48,7 +54,12 @@ func init() {
 func locateConfigFile() (filePath string, err error) {
 	if configFileName == "" {
 		// means use the default name & search paths
-		return toolbox.FindFileInPaths(defaultConfigFileName, configFilePaths)
+		for _, filename := range defaultConfigFileNames {
+			if filePath, err = toolbox.FindFileInPaths(filename, configFilePaths); err == nil {
+				return filePath, nil
+			}
+		}
+		return "", err
 	} else {
 		if !toolbox.DoesFileExist(configFileName) {
 			err = fmt.Errorf("Config file '%s' does not exist or insufficient permissions", configFileName)
