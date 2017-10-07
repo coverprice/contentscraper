@@ -55,28 +55,30 @@ var htmlImageTemplateStr = `
     let pageNum = {{.PageNum}};
 
     function scrollToItem() {
-        window.scrollTo(0, $('#item' + itemOffset).offset().top)
+        window.scrollTo(0, $('#item' + itemOffset).offset().top);
     }
     $(document).keypress(function(event) {
-        let key = String.fromCharCode(event.which)
+        let key = String.fromCharCode(event.which);
         if (key == "k") {               // Up
             if (itemOffset > 0) {
-                itemOffset--
-                scrollToItem()
+                itemOffset--;
+                scrollToItem();
             }
         } else if (key == "j") {        // Down
             if (itemOffset < numItemsPerPage - 1) {
-                itemOffset++
-                scrollToItem()
+                itemOffset++;
+                scrollToItem();
             }
         } else if (key == "h") {        // Previous
             if (pageNum > 1) {
-                window.location = '{{.PreviousPagelink.Link}}'
+                window.location = '{{.PreviousPagelink.Link}}';
             }
         } else if (key == "l") {        // Next
-            window.location = '{{.NextPagelink.Link}}'
+            window.location = '{{.NextPagelink.Link}}';
+        } else if (key == "i") {        // Home
+            window.location = '/';
         } else {
-            return
+            return;
         }
         event.preventDefault();
     });
