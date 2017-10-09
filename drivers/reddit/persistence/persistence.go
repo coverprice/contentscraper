@@ -170,8 +170,8 @@ func (this *Persistence) insertPost(post *types.RedditPost) (err error) {
 		post.Id,
 		post.Name,
 		post.Permalink,
-		uint64(post.TimeCreated),
-		uint64(post.TimeStored),
+		int64(post.TimeCreated),
+		int64(post.TimeStored),
 		post.IsActive,
 		post.IsSticky,
 		post.Score,
@@ -278,7 +278,7 @@ func (this *Persistence) GetPosts(
 // Gets the score of the Redditpost at the given percentile (where 100% means all posts,
 // 90% means 90% of posts, etc.
 func (this *Persistence) GetScoreAtPercentile(
-	minTime uint64,
+	minTime int64,
 	subredditName string,
 	percentile float64,
 ) (score int, err error) {
@@ -321,7 +321,7 @@ func (this *Persistence) GetScoreAtPercentile(
 }
 
 func (this *Persistence) GetPostsForSubredditScores(
-	minTime uint64,
+	minTime int64,
 	subredditMinScores map[string]int,
 ) ([]types.RedditPost, error) {
 	var criteria []string

@@ -44,5 +44,5 @@ func TestCanCreateAndRetrieveSourceConfig(t *testing.T) {
 	slr, err = sut.GetSourceLastRunFromId(testSourceConfigId)
 	require.Nil(t, err, "Could not retrieve existing SourceLastRun")
 	require.Equal(t, SourceConfigId(testSourceConfigId), slr.SourceConfigId, "")
-	require.Equal(t, uint64(12345), slr.DateLastRun, "Could not update DateLastRun")
+	require.Equal(t, int64(12345), slr.DateLastRun, "Could not update DateLastRun")
 }

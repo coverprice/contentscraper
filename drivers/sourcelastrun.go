@@ -12,14 +12,14 @@ import (
 type SourceLastRun struct {
 	SourceConfigId SourceConfigId
 	// 0 means not run at all.
-	DateLastRun uint64
+	DateLastRun int64
 }
 
 type SourceLastRunService struct {
 	dbconn *sql.DB
 	// The # of seconds prior to now that
 	// a missing "Last Run" record is presumed to be.
-	DefaultLastRunInterval_s uint64
+	DefaultLastRunInterval_s int64
 }
 
 func NewSourceLastRunService(
@@ -27,7 +27,7 @@ func NewSourceLastRunService(
 ) (sourceLastRunService *SourceLastRunService, err error) {
 	sourceLastRunService = &SourceLastRunService{
 		dbconn: dbconn,
-		DefaultLastRunInterval_s: uint64(7 * 24 * 60 * 60),
+		DefaultLastRunInterval_s: int64(7 * 24 * 60 * 60),
 	}
 	if err = sourceLastRunService.initTables(); err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func (this *SourceLastRunService) GetSourceLastRunFromId(
 		string(id),
 	).Scan(&lastRun.DateLastRun)
 	if err == sql.ErrNoRows {
-		lastRun.DateLastRun = uint64(time.Now().Unix()) - this.DefaultLastRunInterval_s
+		lastRun.DateLastRun = int64(time.Now().Unix()) - this.DefaultLastRunInterval_s
 		err = nil
 	}
 	return

@@ -9,7 +9,7 @@ import (
 
 type cachedPosts struct {
 	Posts       []types.RedditPost
-	TimeCreated uint64
+	TimeCreated int64
 }
 
 var postCache = make(map[string]cachedPosts)
@@ -17,11 +17,11 @@ var postCache = make(map[string]cachedPosts)
 func (this *HtmlViewerRequestHandler) getPosts(
 	feed *config.RedditFeed,
 ) (posts []types.RedditPost, err error) {
-	now := uint64(time.Now().Unix())
+	now := int64(time.Now().Unix())
 
 	cache, ok := postCache[feed.Name]
 	if !ok || (cache.TimeCreated+6*60*60 < now) {
-		minTime := uint64(now - 7*24*60*60)
+		minTime := int64(now - 7*24*60*60)
 		posts, err = this.getPostsFilteredByPercentile(minTime, feed)
 		if err != nil {
 			return
@@ -36,7 +36,7 @@ func (this *HtmlViewerRequestHandler) getPosts(
 }
 
 func filterByMaxDailyPosts(
-	now uint64,
+	now int64,
 	feed *config.RedditFeed,
 	posts []types.RedditPost,
 ) []types.RedditPost {
@@ -54,16 +54,16 @@ func filterByMaxDailyPosts(
 	// add it to the bucket count.
 
 	// 2D map which maps subreddit -> days ago -> number of posts on that day
-	var dailyPostCnt = make(map[string]map[uint64]int)
+	var dailyPostCnt = make(map[string]map[int64]int)
 	var results []types.RedditPost
 	for _, post := range posts {
-		daysAgo := uint64(0)
+		daysAgo := int64(0)
 		if now > post.TimeStored { // This should always be true, but it's just a sanity check.
-			daysAgo = (now - post.TimeStored) / uint64(24*60*60)
+			daysAgo = (now - post.TimeStored) / int64(24*60*60)
 		}
 		_, ok := dailyPostCnt[post.SubredditName]
 		if !ok {
-			dailyPostCnt[post.SubredditName] = make(map[uint64]int)
+			dailyPostCnt[post.SubredditName] = make(map[int64]int)
 		}
 		dailyPostCnt[post.SubredditName][daysAgo]++
 		if dailyPostCnt[post.SubredditName][daysAgo] <= maxDailyPosts[post.SubredditName] {
@@ -76,7 +76,7 @@ func filterByMaxDailyPosts(
 // Retrieves posts for the feed, applying per-subreddit percentile filters.
 // Posts are returned in display order (reverse date).
 func (this *HtmlViewerRequestHandler) getPostsFilteredByPercentile(
-	minTime uint64,
+	minTime int64,
 	feed *config.RedditFeed,
 ) (posts []types.RedditPost, err error) {
 	var subredditMinScore = make(map[string]int)

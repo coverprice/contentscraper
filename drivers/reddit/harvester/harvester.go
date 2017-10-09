@@ -59,7 +59,7 @@ func (this *Harvester) Harvest() (err error) {
 
 func (this *Harvester) pullSource(sourceConfig types.SubredditSourceConfig) (err error) {
 	log.Debugf("Pulling from source '%s'", sourceConfig.Subreddit)
-	var now = uint64(time.Now().Unix())
+	var now = int64(time.Now().Unix())
 	lastRun, err := this.sourceLastRunService.GetSourceLastRunFromId(sourceConfig.GetSourceConfigId())
 	if err != nil {
 		return err
