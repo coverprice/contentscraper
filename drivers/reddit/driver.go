@@ -26,7 +26,6 @@ func NewRedditDriver(
 	harvesterDbconn *sql.DB,
 	viewerDbconn *sql.DB,
 	conf *config.Config,
-	sourceLastRunService *drivers.SourceLastRunService,
 ) (driver *RedditDriver, err error) {
 	var scraper *scrape.Scraper
 	if scraper, err = scrape.NewScraperFromConfig(conf); err != nil {
@@ -42,7 +41,6 @@ func NewRedditDriver(
 	harvester, err = harvest.NewHarvester(
 		scraper,
 		persistenceHarvester,
-		sourceLastRunService,
 	)
 	if err != nil {
 		return

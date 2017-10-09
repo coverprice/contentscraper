@@ -1,7 +1,6 @@
 package reddit
 
 import (
-	"github.com/coverprice/contentscraper/drivers"
 	persist "github.com/coverprice/contentscraper/drivers/reddit/persistence"
 	scrape "github.com/coverprice/contentscraper/drivers/reddit/scraper"
 	"github.com/coverprice/contentscraper/drivers/reddit/types"
@@ -18,29 +17,26 @@ import (
 // are updated to reflect any changes in their score, deleted status,
 // etc).
 type Harvester struct {
-	scraper              *scrape.Scraper
-	persistence          *persist.Persistence
-	sourceLastRunService *drivers.SourceLastRunService
-	sources              []types.SubredditSourceConfig
-	MaxPagesToScrape     int     // Maximum # of pages to scrape (per source)
-	MinPostsPerScrape    int     // Min posts in scrape result to continue
-	MinNewPostPercent    float64 // Min new posts in scrape result to continue.
+	scraper           *scrape.Scraper
+	persistence       *persist.Persistence
+	sources           []types.SubredditSourceConfig
+	MaxPagesToScrape  int     // Maximum # of pages to scrape (per source)
+	MinPostsPerScrape int     // Min posts in scrape result to continue
+	MinNewPostPercent float64 // Min new posts in scrape result to continue.
 }
 
 // Creates a new Harvester instance
 func NewHarvester(
 	scraper *scrape.Scraper,
 	persistence *persist.Persistence,
-	sourceLastRunService *drivers.SourceLastRunService,
 ) (*Harvester, error) {
 	return &Harvester{
-		scraper:              scraper,
-		persistence:          persistence,
-		sourceLastRunService: sourceLastRunService,
-		sources:              make([]types.SubredditSourceConfig, 0),
-		MaxPagesToScrape:     10,
-		MinPostsPerScrape:    10,
-		MinNewPostPercent:    20.0,
+		scraper:           scraper,
+		persistence:       persistence,
+		sources:           make([]types.SubredditSourceConfig, 0),
+		MaxPagesToScrape:  10,
+		MinPostsPerScrape: 10,
+		MinNewPostPercent: 20.0,
 	}, nil
 }
 
@@ -60,10 +56,6 @@ func (this *Harvester) Harvest() (err error) {
 func (this *Harvester) pullSource(sourceConfig types.SubredditSourceConfig) (err error) {
 	log.Debugf("Pulling from source '%s'", sourceConfig.Subreddit)
 	var now = int64(time.Now().Unix())
-	lastRun, err := this.sourceLastRunService.GetSourceLastRunFromId(sourceConfig.GetSourceConfigId())
-	if err != nil {
-		return err
-	}
 
 	var context = scrape.NewContextForHot(sourceConfig.Subreddit)
 	numPagesScraped := 0
@@ -109,10 +101,5 @@ func (this *Harvester) pullSource(sourceConfig types.SubredditSourceConfig) (err
 		}
 	}
 	log.Debugf("Completed pulling from source '%s'", sourceConfig.Subreddit)
-
-	lastRun.DateLastRun = now
-	if err := this.sourceLastRunService.UpsertLastRun(lastRun); err != nil {
-		return err
-	}
 	return nil
 }

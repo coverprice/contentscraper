@@ -69,13 +69,8 @@ func getSut(t *testing.T, dbconn *sql.DB) *Harvester {
 		t.Error("Could not initialize persistence layer: ", err)
 	}
 
-	var sourceLastRunService *drivers.SourceLastRunService
-	if sourceLastRunService, err = drivers.NewSourceLastRunService(dbconn); err != nil {
-		t.Error("Could not initialize SourceLastRunService: ", err)
-	}
-
 	var harvester *Harvester
-	harvester, err = NewHarvester(scraper, persistence, sourceLastRunService)
+	harvester, err = NewHarvester(scraper, persistence)
 	if err != nil {
 		t.Error("Could not initialize Harvester: ", err)
 	}

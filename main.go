@@ -53,20 +53,9 @@ func initialize() (err error) {
 	log.Debug("Initializing database.")
 	database.Initialize(conf.BackendStorePath)
 
-	// Drivers module
-	log.Debug("Initializing Drivers module.")
-	var sourceLastRunService *drivers.SourceLastRunService
-	var dbconn1, dbconn2 *sql.DB
-
-	if dbconn1, err = database.NewConnection(); err != nil {
-		return fmt.Errorf("Could not create DB connection [1]: %v", err)
-	}
-	if sourceLastRunService, err = drivers.NewSourceLastRunService(dbconn1); err != nil {
-		return fmt.Errorf("Could not initialize SourceLastRunService: %v", err)
-	}
-
 	// Init RedditDriver
 	log.Debug("Initializing Reddit driver.")
+	var dbconn1, dbconn2 *sql.DB
 	var redditDriver *reddit.RedditDriver
 	if dbconn1, err = database.NewConnection(); err != nil {
 		return fmt.Errorf("Could not create DB connection [2]: %v", err)
@@ -74,7 +63,7 @@ func initialize() (err error) {
 	if dbconn2, err = database.NewConnection(); err != nil {
 		return fmt.Errorf("Could not create DB connection [3]: %v", err)
 	}
-	if redditDriver, err = reddit.NewRedditDriver(dbconn1, dbconn2, conf, sourceLastRunService); err != nil {
+	if redditDriver, err = reddit.NewRedditDriver(dbconn1, dbconn2, conf); err != nil {
 		return fmt.Errorf("Could not initialize RedditDriver: %v", err)
 	}
 	sourceDrivers = append(sourceDrivers, redditDriver)
