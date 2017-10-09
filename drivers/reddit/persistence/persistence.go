@@ -61,7 +61,6 @@ func (this *Persistence) initTables() (err error) {
             , url TEXT
             , subreddit_name TEXT NOT NULL
             , subreddit_id TEXT NOT NULL
-            , is_published INTEGER DEFAULT 0
             , PRIMARY KEY (id, subreddit_id)
         ) WITHOUT ROWID
         ;
@@ -151,7 +150,6 @@ func (this *Persistence) insertPost(post *types.RedditPost) (err error) {
             , url
             , subreddit_name
             , subreddit_id
-            , is_published
         ) VALUES
             ( $a
             , $b
@@ -165,7 +163,6 @@ func (this *Persistence) insertPost(post *types.RedditPost) (err error) {
             , $j
             , $k
             , $l
-            , $m
         )`,
 		post.Id,
 		post.Name,
@@ -179,7 +176,6 @@ func (this *Persistence) insertPost(post *types.RedditPost) (err error) {
 		post.Url,
 		post.SubredditName,
 		post.SubredditId,
-		post.IsPublished,
 	)
 	return
 }
@@ -194,7 +190,6 @@ func (this *Persistence) updatePost(post *types.RedditPost) (err error) {
             , score = $e
             , title = $f
             , url = $g
-            , is_published = $h
         WHERE id = $i
           AND subreddit_id = $j
         `,
@@ -205,7 +200,6 @@ func (this *Persistence) updatePost(post *types.RedditPost) (err error) {
 		post.Score,
 		post.Title,
 		post.Url,
-		post.IsPublished,
 
 		post.Id,
 		post.SubredditId,
@@ -232,7 +226,6 @@ func (this *Persistence) GetPosts(
             , url
             , subreddit_name
             , subreddit_id
-            , is_published
         FROM redditpost
         ` + where_clause
 	if rows, err = this.dbconn.Query(sql, params...); err != nil {
@@ -257,7 +250,6 @@ func (this *Persistence) GetPosts(
 			&redditPost.Url,
 			&redditPost.SubredditName,
 			&redditPost.SubredditId,
-			&redditPost.IsPublished,
 		)
 		if err != nil {
 			return

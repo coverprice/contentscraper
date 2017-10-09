@@ -9,9 +9,8 @@ import (
 type RedditPost struct {
 	Id            string
 	Name          string // Note that this more of an ID, used in the "after" parameter of the scraper
-	IsPublished   bool
-	TimeCreated   int64 `mapstructure:"time_created"`
-	TimeStored    int64 `mapstructure:"time_stored"`
+	TimeCreated   int64  `mapstructure:"time_created"`
+	TimeStored    int64  `mapstructure:"time_stored"`
 	Permalink     string
 	IsActive      bool
 	IsSticky      bool
@@ -28,7 +27,6 @@ func NewRedditPostFromBotPost(bp *reddit.Post) (p RedditPost) {
 	p.Id = bp.ID
 	p.Name = bp.Name
 	p.Score = int64(bp.Score)
-	p.IsPublished = false
 	p.TimeCreated = int64(bp.CreatedUTC)
 	p.TimeStored = int64(bp.CreatedUTC)
 	p.Permalink = bp.Permalink

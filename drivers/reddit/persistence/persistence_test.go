@@ -19,7 +19,6 @@ func TestCanCreateAndRetrieveRedditPost(t *testing.T) {
 	var post = &types.RedditPost{
 		Id:            "some_id",
 		Name:          "jkjkjk",
-		IsPublished:   false,
 		TimeCreated:   1234,
 		TimeStored:    1235,
 		Permalink:     "/r/funny/xyz123",
