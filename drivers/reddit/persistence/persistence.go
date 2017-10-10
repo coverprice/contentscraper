@@ -326,7 +326,6 @@ func (this *Persistence) GetPostsForSubredditScores(
         WHERE (%s)
           AND time_stored >= $a
           AND is_active = 1
-        ORDER BY time_stored DESC, id
         LIMIT 3000
     `
 	whereClause = fmt.Sprintf(whereClause, strings.Join(criteria, " OR "))

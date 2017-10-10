@@ -14,7 +14,7 @@ var _ http.Handler = &HttpHandler{}
 
 // HttpHandler is attached to the standard "http" server, bound to a base URL.
 // It knows the base URL and understands Http. It parses the URL and delegates
-// the response to the demuxer.
+// the response to the HtmlViewerRequestHandler.
 type HttpHandler struct {
 	feeds          map[string]config.RedditFeed
 	requestHandler IRequestHandler
@@ -66,6 +66,5 @@ func (this HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request. Cannot parse page number", 500)
 		return
 	}
-	log.Debugf("Received request for feed '%s', page %d", feedname, pagenum)
 	this.requestHandler.HandleFeed(&feed, pagenum, w)
 }

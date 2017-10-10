@@ -61,7 +61,6 @@ func (this *Harvester) pullSource(sourceConfig types.SubredditSourceConfig) (err
 	numPagesScraped := 0
 	for {
 		var posts []types.RedditPost
-		log.Debugf("Pulling posts from source '%s'", sourceConfig.Subreddit)
 		posts, err = this.scraper.GetNextResults(&context)
 		if err != nil {
 			return
@@ -100,6 +99,5 @@ func (this *Harvester) pullSource(sourceConfig types.SubredditSourceConfig) (err
 			break
 		}
 	}
-	log.Debugf("Completed pulling from source '%s'", sourceConfig.Subreddit)
 	return nil
 }

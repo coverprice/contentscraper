@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"github.com/coverprice/contentscraper/config"
 	persist "github.com/coverprice/contentscraper/drivers/reddit/persistence"
-	"github.com/coverprice/contentscraper/drivers/reddit/types"
 	"github.com/coverprice/contentscraper/server/htmlutil"
-	log "github.com/sirupsen/logrus"
+	// log "github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -17,6 +16,8 @@ const (
 // Verify that HtmlViewerRequestHandler implements IRequestHandler interface
 var _ IRequestHandler = &HtmlViewerRequestHandler{}
 
+// The HtmlViewerRequestHandler handles a single request for a page within a specific
+// feed. It requests the posts from a separate class, and converts them to an HTML response.
 type HtmlViewerRequestHandler struct {
 	persistence *persist.Persistence
 }
@@ -158,11 +159,6 @@ type pagelink struct {
 	IsHighlighted bool
 }
 
-type annotatedPost struct {
-	types.RedditPost
-	MediaLink *htmlutil.MediaLink
-}
-
 func (this *HtmlViewerRequestHandler) HandleFeed(
 	feed *config.RedditFeed,
 	pagenum int,
@@ -183,20 +179,9 @@ func (this *HtmlViewerRequestHandler) HandleFeed(
 
 	if startIdx >= len(posts) || startIdx+itemsPerPage >= len(posts) {
 		// Out of bounds.
-		posts = []types.RedditPost{}
+		posts = []annotatedPost{}
 	} else {
 		posts = posts[startIdx : startIdx+itemsPerPage]
-	}
-
-	var annotatedPosts []annotatedPost
-	for _, post := range posts {
-		a := annotatedPost{RedditPost: post}
-		if a.Url != "" {
-			if a.MediaLink, err = htmlutil.UrlToEmbedUrl(a.Url); err != nil {
-				log.Error("Error trying to convert post URL to MediaLink", err)
-			}
-		}
-		annotatedPosts = append(annotatedPosts, a)
 	}
 
 	pagelinks := getPagelinks(feed.Name, pagenum)
@@ -217,7 +202,7 @@ func (this *HtmlViewerRequestHandler) HandleFeed(
 			htmlutil.NewBreadcrumb("Home", "/"),
 			htmlutil.NewBreadcrumb(feed.Name, "/"),
 		},
-		Posts:            annotatedPosts,
+		Posts:            posts,
 		Pagelinks:        pagelinks,
 		PreviousPagelink: pagelinks[0], // Clunky, but necessary since arithmetic isn't possible in templates.
 		NextPagelink:     pagelinks[len(pagelinks)-1],
