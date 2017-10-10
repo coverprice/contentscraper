@@ -1,0 +1,31 @@
+reddit:
+    secrets:
+        clientid: "some client id"
+        clientsecret: "some client secret"
+        username: "some reddit username"
+        password: "some reddit password"
+
+    feeds:
+        - name: "showerthoughts"
+          description: "Shower thoughts"
+          percentile: 80.0
+          max_daily_posts: 10
+          subreddits:
+            - name: "showerthoughts"
+
+        - name: "legaladvice"
+          description: "Best of LegalAdvice"
+          percentile: 60.0
+          max_daily_posts: 10
+          subreddits:
+            - name: "bestoflegaladvice"
+
+        - name: "funny"
+          description: "Funny pictures"
+          media: "image"
+          percentile: 80.0
+          subreddits:
+            - name: "funny"
+              percentile: 30.0
+              max_daily_posts: 5
+            - name: "gifs"
