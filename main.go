@@ -79,7 +79,7 @@ func initialize() (err error) {
 }
 
 func shutdown() {
-	log.Debug("Program shutdown initiated")
+	log.Info("Program shutdown initiated")
 	for _, ch := range quitChannels {
 		ch <- true
 	}
@@ -87,7 +87,7 @@ func shutdown() {
 	waitgroup.Wait()
 	log.Debug("Closing down database connections...")
 	database.Shutdown()
-	log.Debug("Shutdown complete")
+	log.Info("Shutdown complete")
 }
 
 func beginHarvest() {
@@ -106,14 +106,14 @@ func harvestLoop(quit chan bool) {
 
 	for {
 		for _, driver := range sourceDrivers {
-			log.Debug("Running Harvest...")
+			log.Info("Harvesting...")
 			if err := driver.Harvest(); err != nil {
 				log.Fatal(err)
 				return
 			}
 		}
 
-		log.Debugf("Harvest complete. Waiting for %d minutes...", harvestInterval)
+		log.Infof("Harvest complete. Waiting for %d minutes...", harvestInterval)
 		if !timeout.Stop() {
 			<-timeout.C
 		}
@@ -135,5 +135,6 @@ func main() {
 	if isHarvestingEnabled {
 		beginHarvest()
 	}
+	log.Info("Launching web service")
 	webServer.Launch()
 }
