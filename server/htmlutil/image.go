@@ -79,10 +79,11 @@ func UrlToEmbedUrl(rawurl string) (link *MediaLink, err error) {
 	if toolbox.InDomain("gfycat.com", strings.ToLower(u.Host)) {
 		// This is from gfycat's website.
 		html := `<div style="position:relative;padding-bottom:54%">` +
-			`<iframe src="https://gfycat.com/ifr%s" frameborder="0" scrolling="no" width="100%" height="100%" style="position:absolute;top:0;left:0" allowfullscreen>` +
+			`<iframe src="https://gfycat.com/ifr` + u.Path + `"` +
+			` frameborder="0" scrolling="no" width="100%" height="100%"` +
+			` style="position:absolute;top:0;left:0" allowfullscreen>` +
 			`</iframe>` +
 			`</div>`
-		html = fmt.Sprintf(html, u.Path)
 		return &MediaLink{
 			Embed: template.HTML(html), // template.HTML() means "don't escape this when rendered"
 		}, nil
