@@ -61,11 +61,16 @@ func (this *HtmlViewerRequestHandler) getPostsImpl(
 	// Sort posts by feed, age_in_days, score DESC
 	sortPostsByFeedAgeScore(posts)
 
-	// Filter out posts that exceed the max_daily_posts criteria
-	posts = filterByMaxDailyPosts(posts, feed)
-
 	// Convert image links into embedded links
 	decoratePostsWithMediaLinks(posts)
+
+	if feed.Media == config.MEDIA_TYPE_IMAGE {
+		// Filter out posts with images that can't be embedded
+		posts = filterOutEmptyImages(posts)
+	}
+
+	// Filter out posts that exceed the max_daily_posts criteria
+	posts = filterByMaxDailyPosts(posts, feed)
 
 	// Sort into display order
 	sortPostsIntoDisplayOrder(posts)
@@ -140,6 +145,15 @@ func (a ByAgeTimeStoredId) Less(i, j int) bool {
 }
 func sortPostsIntoDisplayOrder(posts []annotatedPost) {
 	sort.Sort(ByAgeTimeStoredId(posts))
+}
+
+func filterOutEmptyImages(posts []annotatedPost) (results []annotatedPost) {
+	for _, post := range posts {
+		if post.MediaLink != nil {
+			results = append(results, post)
+		}
+	}
+	return
 }
 
 func filterByMaxDailyPosts(posts []annotatedPost, feed *config.RedditFeed) (results []annotatedPost) {
