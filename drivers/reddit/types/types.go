@@ -3,7 +3,6 @@ package types
 import (
 	"fmt"
 	"github.com/coverprice/contentscraper/drivers"
-	"github.com/turnage/graw/reddit"
 )
 
 type RedditPost struct {
@@ -19,24 +18,6 @@ type RedditPost struct {
 	Url           string
 	SubredditName string `mapstructure:"subreddit_name"`
 	SubredditId   string `mapstructure:"subreddit_id"`
-}
-
-// Create a new RedditPost object from the scraper client's format
-func NewRedditPostFromBotPost(bp *reddit.Post) (p RedditPost) {
-	// Populate drivers.Post fields
-	p.Id = bp.ID
-	p.Name = bp.Name
-	p.Score = int64(bp.Score)
-	p.TimeCreated = int64(bp.CreatedUTC)
-	p.TimeStored = int64(bp.CreatedUTC)
-	p.Permalink = bp.Permalink
-	p.IsActive = !bp.Deleted
-	p.IsSticky = bp.Stickied
-	p.Title = bp.Title
-	p.Url = bp.URL
-	p.SubredditName = bp.Subreddit
-	p.SubredditId = bp.SubredditID
-	return
 }
 
 // Compile time interface check

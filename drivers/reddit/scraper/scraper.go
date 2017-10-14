@@ -6,6 +6,7 @@ import (
 	"github.com/coverprice/contentscraper/drivers/reddit/types"
 	// log "github.com/sirupsen/logrus"
 	"github.com/turnage/graw/reddit"
+	"strings"
 )
 
 const (
@@ -101,7 +102,7 @@ func (this *Scraper) GetNextResults(context *Context) (posts []types.RedditPost,
 	}
 
 	for _, botpost := range harvest.Posts {
-		redditPost := types.NewRedditPostFromBotPost(botpost)
+		redditPost := newRedditPostFromBotPost(botpost)
 		if redditPost.IsSticky {
 			// Skip Sticky posts because they tend to be non-useful posts like rules or announcements.
 			continue
@@ -110,4 +111,22 @@ func (this *Scraper) GetNextResults(context *Context) (posts []types.RedditPost,
 		context.After = redditPost.Name
 	}
 	return posts, nil
+}
+
+// Create a new RedditPost object from the scraper client's format
+func newRedditPostFromBotPost(bp *reddit.Post) (p types.RedditPost) {
+	// Populate drivers.Post fields
+	p.Id = bp.ID
+	p.Name = bp.Name
+	p.Score = int64(bp.Score)
+	p.TimeCreated = int64(bp.CreatedUTC)
+	p.TimeStored = int64(bp.CreatedUTC)
+	p.Permalink = bp.Permalink
+	p.IsActive = !bp.Deleted
+	p.IsSticky = bp.Stickied
+	p.Title = bp.Title
+	p.Url = bp.URL
+	p.SubredditName = strings.ToLower(bp.Subreddit)
+	p.SubredditId = bp.SubredditID
+	return
 }

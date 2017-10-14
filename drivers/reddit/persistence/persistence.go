@@ -68,9 +68,6 @@ func (this *Persistence) initTables() (err error) {
             reddit_subreddit_name ON redditpost(subreddit_name)
         ;
         CREATE INDEX IF NOT EXISTS
-            reddit_subreddit_name_lower ON redditpost(lower(subreddit_name))
-        ;
-        CREATE INDEX IF NOT EXISTS
             reddit_url ON redditpost(url)
         ;
         CREATE INDEX IF NOT EXISTS
@@ -258,8 +255,6 @@ func (this *Persistence) GetPosts(
 		if err != nil {
 			return
 		}
-		// Canonicalize the subreddit name to make for easier comparisons later on.
-		redditPost.SubredditName = strings.ToLower(redditPost.SubredditName)
 		/*
 			        Maybe this could make a comeback, if I could figure out how...
 			        Possibly, Scan the row into a map?
@@ -280,11 +275,10 @@ func (this *Persistence) GetScoreAtPercentile(
 	subredditName string,
 	percentile float64,
 ) (score int, err error) {
-	subredditName = strings.ToLower(subredditName)
 	sql := `
         SELECT COUNT(*) AS cnt
         FROM redditpost
-        WHERE lower(subreddit_name) = $a
+        WHERE subreddit_name = $a
           AND time_stored >= $b
           AND is_active = 1
     `
@@ -307,7 +301,7 @@ func (this *Persistence) GetScoreAtPercentile(
 	sql = `
         SELECT score
         FROM redditpost
-        WHERE lower(subreddit_name) = $a
+        WHERE subreddit_name = $a
           AND time_stored >= $b
           AND is_active = 1
         ORDER BY score DESC
@@ -326,7 +320,7 @@ func (this *Persistence) GetPostsForSubredditScores(
 	var criteria []string
 	for subredditName, minScore := range subredditMinScores {
 		criteria = append(criteria,
-			fmt.Sprintf("(lower(subreddit_name) = '%s' AND score >= %d)", strings.ToLower(subredditName), minScore))
+			fmt.Sprintf("(subreddit_name = '%s' AND score >= %d)", subredditName, minScore))
 	}
 
 	whereClause := `
