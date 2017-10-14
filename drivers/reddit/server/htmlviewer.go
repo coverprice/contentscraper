@@ -49,8 +49,20 @@ var htmlImageTemplateStr = `
             let max_w = window.innerWidth - el.x - 50;
             let max_h = window.innerHeight - 100;
             let scale_factor = getScaleFactor(el_w, el_h, max_w, max_h)
-            el.style.width = Math.floor(scale_factor * el_w) + "px";
-            el.style.height = Math.floor(scale_factor * el_h) + "px";
+            let new_w = Math.floor(scale_factor * el_w);
+            let new_h = Math.floor(scale_factor * el_h);
+			/*
+            console.log(
+              "Processing image: "+idx+
+              "  NW/NH: " + el_w + "," + el_h + " (" + (el_w/el_h).toFixed(4) + ")" +
+              "  Window W/H: " + max_w + "," + max_h + " (" + (max_w/max_h).toFixed(4) + ")" +
+              "  Scalefactor: " + scale_factor.toFixed(4) +
+              "  New W/H: " + new_w + "," + new_h + " (" + (new_w/new_h).toFixed(4) + ")" +
+              "  "+el.src
+            );
+			*/
+            el.style.width = new_w + "px";
+            el.style.height = new_h + "px";
         })
     });
 
