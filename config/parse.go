@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 const (
@@ -219,6 +220,8 @@ func parseFromString(configblob string) (conf *Config, err error) {
 			conf.Reddit.Feeds[idx].Media = MEDIA_TYPE_TEXT
 		}
 		for subidx, subreddit := range redditfeed.Subreddits {
+			// Canonicalize subreddit name (i.e. lowercase)
+			conf.Reddit.Feeds[idx].Subreddits[subidx].Name = strings.ToLower(subreddit.Name)
 			if subreddit.Percentile == 0 {
 				conf.Reddit.Feeds[idx].Subreddits[subidx].Percentile = conf.Reddit.Feeds[idx].DefaultPercentile
 			}

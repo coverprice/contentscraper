@@ -58,7 +58,7 @@ func TestCanCreateAndRetrieveRedditPost(t *testing.T) {
 
 	var posts []types.RedditPost
 	if posts, err = sut.GetPosts(
-		"WHERE subreddit_name=$a ORDER BY time_created", "funny",
+		"WHERE lower(subreddit_name)=$a ORDER BY time_created", "funny",
 	); err != nil {
 		t.Error("Could not retrieve posts:", err)
 	}
