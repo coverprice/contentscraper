@@ -31,6 +31,7 @@ func NewHtmlViewerRequestHandler(persistence *persist.Persistence) *HtmlViewerRe
 var htmlImageTemplateStr = `
     {{define "title"}}Reddit Feed - {{.Title}}{{end}}
     {{define "js"}}
+    <script src="https://unpkg.com/imagesloaded@4/imagesloaded.pkgd.min.js"></script>
     <script>
     // Returns the scale factor required to get the image dimensions to fit into the given window
     // dimensions.
@@ -38,32 +39,37 @@ var htmlImageTemplateStr = `
         let scale_factor = window_w / img_w;
         return (scale_factor * img_h > window_h) ? window_h / img_h : scale_factor;
     }
-      // Scale down images that are wider than the page so they fit on the page.
-    $(document).ready(function() {
-        $('.postimage').each(function(idx, el) {
-            let el_w = el.naturalWidth || el.videoWidth || el.width;
-            let el_h = el.naturalHeight || el.videoHeight || el.height;
-            if (!el_w || !el_h) {
-                console.log("Error getting width/height for image index: " + idx);
-            }
-            let max_w = window.innerWidth - el.x - 50;
-            let max_h = window.innerHeight - 100;
-            let scale_factor = getScaleFactor(el_w, el_h, max_w, max_h)
-            let new_w = Math.floor(scale_factor * el_w);
-            let new_h = Math.floor(scale_factor * el_h);
-			/*
+    // Scale down images that are wider than the page so they fit on the page.
+    // Waits for naturalHeight/Width to become available by using a jQuery plugin.
+    $(document).imagesLoaded().progress(function(instance, image) {
+        let el = image.img;
+        if (!image.isLoaded) {
+            console.log("Failed to load image: " + el.src);
+            return;
+        }
+        let el_w = el.naturalWidth || el.videoWidth || el.width;
+        let el_h = el.naturalHeight || el.videoHeight || el.height;
+        if (!el_w || !el_h) {
+            console.log("Error getting width/height for image: " + el.src);
+            return;
+        }
+        let max_w = window.innerWidth - el.x - 50;
+        let max_h = window.innerHeight - 100;
+        let scale_factor = getScaleFactor(el_w, el_h, max_w, max_h)
+        let new_w = Math.floor(scale_factor * el_w);
+        let new_h = Math.floor(scale_factor * el_h);
+        /*
             console.log(
-              "Processing image: "+idx+
+              "Processing image: "+
               "  NW/NH: " + el_w + "," + el_h + " (" + (el_w/el_h).toFixed(4) + ")" +
               "  Window W/H: " + max_w + "," + max_h + " (" + (max_w/max_h).toFixed(4) + ")" +
               "  Scalefactor: " + scale_factor.toFixed(4) +
               "  New W/H: " + new_w + "," + new_h + " (" + (new_w/new_h).toFixed(4) + ")" +
               "  "+el.src
             );
-			*/
-            el.style.width = new_w + "px";
-            el.style.height = new_h + "px";
-        })
+        */
+        el.style.width = new_w + "px";
+        el.style.height = new_h + "px";
     });
 
     let numPages = {{.NumPages}};
@@ -100,7 +106,7 @@ var htmlImageTemplateStr = `
         } else if (key == "h" && pageNum > 1) {        // Previous page
             window.location = '{{.PreviousPagelink.Link}}';
 
-        } else if (key == "l" && pageNum < numPages - 1) {        // Next page
+        } else if (key == "l" && pageNum < numPages) {        // Next page
             window.location = '{{.NextPagelink.Link}}';
 
         } else if (key == "i") {        // Home
