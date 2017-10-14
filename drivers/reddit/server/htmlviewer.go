@@ -54,7 +54,7 @@ var htmlImageTemplateStr = `
         })
     });
 
-    let numItemsPerPage = {{.NumItemsPerPage}};
+    let numPages = {{.NumPages}};
     let pageNum = {{.PageNum}};
 
     function scrollToNextItem(is_up) {
@@ -84,12 +84,13 @@ var htmlImageTemplateStr = `
         let key = String.fromCharCode(event.which);
         if (key == "k" || key == "j") {               // Up/Down
             scrollToNextItem(key == "k")
-        } else if (key == "h") {        // Previous
-            if (pageNum > 1) {
-                window.location = '{{.PreviousPagelink.Link}}';
-            }
-        } else if (key == "l") {        // Next
+
+        } else if (key == "h" && pageNum > 1) {        // Previous page
+            window.location = '{{.PreviousPagelink.Link}}';
+
+        } else if (key == "l" && pageNum < numPages - 1) {        // Next page
             window.location = '{{.NextPagelink.Link}}';
+
         } else if (key == "i") {        // Home
             window.location = '/';
         } else {
@@ -175,11 +176,11 @@ type pagelink struct {
 
 func (this *HtmlViewerRequestHandler) HandleFeed(
 	feed *config.RedditFeed,
-	pagenum int,
+	pageNum int,
 	w http.ResponseWriter,
 ) {
-	if pagenum == 0 {
-		pagenum = 1
+	if pageNum == 0 {
+		pageNum = 1
 	}
 
 	posts, err := this.getPosts(feed)
@@ -189,7 +190,8 @@ func (this *HtmlViewerRequestHandler) HandleFeed(
 	}
 
 	itemsPerPage := NUM_ITEMS_PER_PAGE
-	startIdx := itemsPerPage * (pagenum - 1)
+	numPages := (len(posts) + NUM_ITEMS_PER_PAGE - 1) / NUM_ITEMS_PER_PAGE
+	startIdx := itemsPerPage * (pageNum - 1)
 
 	if startIdx >= len(posts) || startIdx+itemsPerPage >= len(posts) {
 		// Out of bounds.
@@ -198,7 +200,7 @@ func (this *HtmlViewerRequestHandler) HandleFeed(
 		posts = posts[startIdx : startIdx+itemsPerPage]
 	}
 
-	pagelinks := getPagelinks(feed.Name, pagenum)
+	pagelinks := getPagelinks(feed.Name, pageNum, numPages)
 	data := struct {
 		Title       string
 		Description string
@@ -207,7 +209,7 @@ func (this *HtmlViewerRequestHandler) HandleFeed(
 		Pagelinks        []pagelink
 		PreviousPagelink pagelink
 		NextPagelink     pagelink
-		NumItemsPerPage  int
+		NumPages         int
 		PageNum          int
 	}{
 		Title:       feed.Name,
@@ -220,40 +222,40 @@ func (this *HtmlViewerRequestHandler) HandleFeed(
 		Pagelinks:        pagelinks,
 		PreviousPagelink: pagelinks[0], // Clunky, but necessary since arithmetic isn't possible in templates.
 		NextPagelink:     pagelinks[len(pagelinks)-1],
-		NumItemsPerPage:  itemsPerPage,
-		PageNum:          pagenum,
+		NumPages:         numPages,
+		PageNum:          pageNum,
 	}
 	htmlutil.RenderTemplate(w, htmlImageTempl, data)
 }
 
-func getPagelinks(feedname string, pagenum int) (links []pagelink) {
+func getPagelinks(feedname string, pageNum, numPages int) (links []pagelink) {
 	link := pagelink{
 		Text:          "Previous",
-		Link:          ConstructUrl(&feedname, pagenum-1),
+		Link:          ConstructUrl(&feedname, pageNum-1),
 		IsEnabled:     true,
 		IsHighlighted: false,
 	}
-	if pagenum == 1 {
+	if pageNum == 1 {
 		link.IsEnabled = false
 	}
 	links = append(links, link)
 
 	for i := -2; i < 3; i++ {
-		pn := pagenum + i
-		if pn <= 0 {
+		pn := pageNum + i
+		if pn <= 0 || pn > numPages {
 			continue
 		}
 		link = pagelink{
 			Text:          fmt.Sprintf("%d", pn),
 			Link:          ConstructUrl(&feedname, pn),
 			IsEnabled:     true,
-			IsHighlighted: (pagenum == pn),
+			IsHighlighted: (pageNum == pn),
 		}
 		links = append(links, link)
 	}
 	link = pagelink{
 		Text:          "Next",
-		Link:          ConstructUrl(&feedname, pagenum+1),
+		Link:          ConstructUrl(&feedname, pageNum+1),
 		IsEnabled:     true,
 		IsHighlighted: false,
 	}
