@@ -10,13 +10,56 @@ import (
 
 var indexTemplateStr = `
     {{define "title"}}Home{{end}}
+    {{define "js"}}
+    <script>
+    let menuIdx = 0;
+    let numItems = 0;
+    let menuUrl = '/';
+    $(document).ready(function() {
+	numItems = $('.mainmenu').length;
+	moveToMenuIdx(0);
+    });
+
+    function moveToMenuIdx(idx) {
+      $('.mainmenu.active').removeClass('active');
+      let item = $('.mainmenu').eq(idx);
+      item.addClass('active');
+      menuIdx = idx;
+      menuUrl = item.find('a')[0].href;
+    }
+
+    $(document).keypress(function(event) {
+        let key = String.fromCharCode(event.which);
+        if (key == "k" && menuIdx > 0) {
+	    moveToMenuIdx(menuIdx - 1);
+	} else if (key == "j" && menuIdx < numItems-1) {
+	    moveToMenuIdx(menuIdx + 1);
+	} else if (key == "l") {
+            window.location = menuUrl;
+        } else {
+            return;
+        }
+        event.preventDefault();
+    });
+
+    </script>
+    {{end}}
+    {{define "style"}}
+    <style>
+    .active a {
+        color: white !important;
+    }
+    </style>
+    {{end}}
     {{define "content"}}
-    <div class="list-group">
+    <div class="container">
+    <ul class="list-group">
         {{range .DriverFeeds}}
-            <div class="list-group-item">
+            <li class="list-group-item mainmenu">
                 <a href="{{.BaseUrl}}/?feed={{.Feed.Name}}">{{.Feed.Name}} - {{.Feed.Description}}</a>
-            </div>
+            </li>
         {{end}}
+    </ul>
     </div>
     {{end}}
 `
