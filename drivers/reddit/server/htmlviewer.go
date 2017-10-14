@@ -82,25 +82,19 @@ var htmlImageTemplateStr = `
     let pageNum = {{.PageNum}};
 
     function scrollToNextItem(is_up) {
-       let top_y = $(window).scrollTop();
+       let window_top_y = $(window).scrollTop();
        let new_top_y = 0;
 
-       let items = [0];
+       let items = [0, window_top_y];
        $(".feeditem").each(function(idx, el) {
            items.push(Math.floor($(el).offset().top));
        })
-       items.sort((a, b) => a-b);
-
-       for (let i = 0; i < items.length; i++) {
-           if (is_up && items[i] >= top_y) {
-               // Breaks on the item just before top_y
-               break;
-           }
-           new_top_y = items[i];
-           if (!is_up && items[i] > top_y) {
-               // Breaks on the item just after top_y
-               break;
-           }
+       if (is_up) {
+          items.sort((a, b) => b-a);	// Descending order
+          new_top_y = items.find((val) => val < window_top_y) || 0;
+       } else {
+          items.sort((a, b) => a-b);	// Ascending order
+          new_top_y = items.find((val) => val > window_top_y) || items.pop();
        }
        window.scrollTo(0, new_top_y);
     }
