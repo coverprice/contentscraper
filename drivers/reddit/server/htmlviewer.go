@@ -31,45 +31,59 @@ func NewHtmlViewerRequestHandler(persistence *persist.Persistence) *HtmlViewerRe
 var htmlImageTemplateStr = `
     {{define "title"}}Reddit Feed - {{.Title}}{{end}}
     {{define "js"}}
-	<script>
+    <script>
     // Returns the scale factor required to get the image dimensions to fit into the given window
     // dimensions.
-	function getScaleFactor(img_w, img_h, window_w, window_h) {
-	    let scale_factor = window_w / img_w;
+    function getScaleFactor(img_w, img_h, window_w, window_h) {
+        let scale_factor = window_w / img_w;
         return (scale_factor * img_h > window_h) ? window_h / img_h : scale_factor;
     }
-  	// Scale down images that are wider than the page so they fit on the page.
-	$(document).ready(function() {
-	    $('.postimage').each(function(idx, el) {
-            let el_w = el.naturalWidth || el.videoWidth;
-            let el_h = el.naturalHeight || el.videoHeight;
+      // Scale down images that are wider than the page so they fit on the page.
+    $(document).ready(function() {
+        $('.postimage').each(function(idx, el) {
+            let el_w = el.naturalWidth || el.videoWidth || el.width;
+            let el_h = el.naturalHeight || el.videoHeight || el.height;
+            if (!el_w || !el_h) {
+                console.log("Error getting width/height for image index: " + idx);
+            }
             let max_w = window.innerWidth - el.x - 50;
             let max_h = window.innerHeight - 100;
             let scale_factor = getScaleFactor(el_w, el_h, max_w, max_h)
             el.style.width = Math.floor(scale_factor * el_w) + "px";
             el.style.height = Math.floor(scale_factor * el_h) + "px";
-		})
+        })
     });
 
-    let itemOffset = 0;
     let numItemsPerPage = {{.NumItemsPerPage}};
     let pageNum = {{.PageNum}};
 
-    function scrollToItem() {
-        window.scrollTo(0, $('#item' + itemOffset).offset().top);
+    function scrollToNextItem(is_up) {
+       let top_y = $(window).scrollTop();
+       let new_top_y = 0;
+
+       let items = [0];
+       $(".feeditem").each(function(idx, el) {
+           items.push(Math.floor($(el).offset().top));
+       })
+       items.sort((a, b) => a-b);
+
+       for (let i = 0; i < items.length; i++) {
+           if (is_up && items[i] >= top_y) {
+               // Breaks on the item just before top_y
+               break;
+           }
+           new_top_y = items[i];
+           if (!is_up && items[i] > top_y) {
+               // Breaks on the item just after top_y
+               break;
+           }
+       }
+       window.scrollTo(0, new_top_y);
     }
     $(document).keypress(function(event) {
         let key = String.fromCharCode(event.which);
-        if (key == "k") {               // Up
-            if (itemOffset > 0) {
-                itemOffset--;
-                scrollToItem();
-            }
-        } else if (key == "j") {        // Down
-            if (itemOffset < numItemsPerPage - 1) {
-                itemOffset++;
-                scrollToItem();
-            }
+        if (key == "k" || key == "j") {               // Up/Down
+            scrollToNextItem(key == "k")
         } else if (key == "h") {        // Previous
             if (pageNum > 1) {
                 window.location = '{{.PreviousPagelink.Link}}';
@@ -83,7 +97,7 @@ var htmlImageTemplateStr = `
         }
         event.preventDefault();
     });
-	</script>
+    </script>
     {{end}}
     {{define "pagination"}}
     <nav>
@@ -106,7 +120,7 @@ var htmlImageTemplateStr = `
 
     <div class="container-fluid">
         {{range $itemIndex, $post := .Posts}}
-        <div class="row" id="item{{$itemIndex}}">
+        <div class="row feeditem">
             <div class="col">
                 <div class="container-fluid">
                     <div class="row">
