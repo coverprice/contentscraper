@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	NUM_ITEMS_PER_PAGE = 20
+	NUM_ITEMS_PER_PAGE = 10
 )
 
 // Verify that HtmlViewerRequestHandler implements IRequestHandler interface
@@ -70,6 +70,12 @@ var htmlImageTemplateStr = `
         */
         el.style.width = new_w + "px";
         el.style.height = new_h + "px";
+    });
+    $(document).ready(function() {
+        let max_height = window.innerHeight - 100;
+	$('.videocontainer').each(function(idx, el) {
+		el.style.maxHeight = max_height + "px";
+	});
     });
 
     let numPages = {{.NumPages}};
@@ -156,15 +162,15 @@ var htmlImageTemplateStr = `
                                 {{if not (eq .MediaLink.Embed "")}}
                                     {{.MediaLink.Embed}}
                                 {{else if hasSuffix .MediaLink.Url ".mp4"}}
-                                    <video playsinline autoplay loop controls class="postimage">
+                                    <video playsinline autoplay loop controls class="videocontainer">
                                         <source src="{{.MediaLink.Url}}" type="video/mp4" />
                                     </video>
                                 {{else if hasSuffix .MediaLink.Url ".webm"}}
-                                    <video playsinline autoplay loop controls class="postimage">
+                                    <video playsinline autoplay loop controls class="videocontainer">
                                         <source src="{{.MediaLink.Url}}" type="video/webm" />
                                     </video>
                                 {{else if not (eq .MediaLink.Url "")}}
-                                    <img src="{{.MediaLink.Url}}" class="img-fluid postimage">
+                                    <img src="{{.MediaLink.Url}}">
                                 {{else}}
                                     {{.MediaLink.Url}}
                                     <small>[No preview available]</small>
