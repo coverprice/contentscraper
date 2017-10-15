@@ -6,6 +6,7 @@ import (
 	// log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
+	"sort"
 )
 
 var indexTemplateStr = `
@@ -73,17 +74,18 @@ type indexHandler struct {
 	server *Server
 }
 
+type driverFeed struct {
+    BaseUrl string
+    Feed    drivers.Feed
+}
+
+
 func (this indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// The "/" pattern matches everything, so we need to check
 	// that we're at the root here.
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
-	}
-
-	type driverFeed struct {
-		BaseUrl string
-		Feed    drivers.Feed
 	}
 
 	var allfeeds []driverFeed
@@ -96,6 +98,7 @@ func (this indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
+	sort.Sort(ByFeedName(allfeeds))
 
 	data := struct {
 		Title string
@@ -110,4 +113,12 @@ func (this indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	htmlutil.RenderTemplate(w, indexTempl, data)
+}
+
+type ByFeedName []driverFeed
+
+func (a ByFeedName) Len() int      { return len(a) }
+func (a ByFeedName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByFeedName) Less(i, j int) bool {
+	return a[i].Feed.Name < a[j].Feed.Name
 }
