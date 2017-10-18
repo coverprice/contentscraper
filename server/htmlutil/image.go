@@ -57,6 +57,11 @@ func UrlToEmbedUrl(rawurl string) (link *MediaLink, err error) {
 		}, nil
 	}
 
+	if toolbox.InDomain("reddit.com", host) && toolbox.MatchString(`^/r/[^/]+/comments`, path) {
+		// Links to comments are skipped.
+		return nil, nil
+	}
+
 	// http://i.imgur.com/foooo.gifv --> http://i.imgur.com/foooo.mp4
 	if toolbox.InDomain("imgur.com", host) && toolbox.MatchString(`\.gifv$`, path) {
 		u.Host = "i.imgur.com"
