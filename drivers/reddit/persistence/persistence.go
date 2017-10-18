@@ -100,35 +100,29 @@ func (this *Persistence) StorePost(
 	err error,
 ) {
 	var postExists int
-	log.Debugf("Checking if post exists")
 	if err = this.searchPostByPk.QueryRow(post.Id, post.SubredditId).Scan(&postExists); err != nil {
 		return
 	}
 	if postExists == 0 {
-		log.Debugf("Post does not exist")
 		// Does not exist when searching by Primary Key.
 
 		// If this post has an image URL, verify that it doesn't already
 		// exist elsewhere.
 		if post.Url != "" {
-			log.Debugf("Searching by URL")
 			if err = this.searchPostByUrl.QueryRow(post.Url).Scan(&postExists); err != nil {
 				return
 			}
 			if postExists != 0 {
-				log.Debugf("Post URL already exists")
 				return STORERESULT_SKIPPED, nil
 			}
 		}
 		// We need to insert this post
-		log.Debugf("Inserting post")
 		if err = this.insertPost(post); err != nil {
 			return
 		}
 		return STORERESULT_NEW, nil
 	}
 	// Exists, update
-	log.Debugf("Updating post")
 	if err = this.updatePost(post); err != nil {
 		return
 	}
@@ -230,7 +224,7 @@ func (this *Persistence) GetPosts(
         FROM redditpost
         ` + where_clause
 	if rows, err = this.dbconn.Query(sql, params...); err != nil {
-		log.Debugf("Error calling SQL %v", err)
+		log.Errorf("Error calling SQL %v", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -264,7 +258,7 @@ func (this *Persistence) GetPosts(
 		*/
 		posts = append(posts, redditPost)
 	}
-	log.Debugf("Retrieved %d posts", len(posts))
+	log.Debugf("Retrieved %d posts from the database", len(posts))
 	return posts, nil
 }
 
@@ -310,6 +304,7 @@ func (this *Persistence) GetScoreAtPercentile(
     `
 	var offsetRows = int(percentile * float64(cnt) / 100.0)
 	err = this.dbconn.QueryRow(sql, subredditName, minTime, offsetRows).Scan(&score)
+	log.Debugf("Subreddit %s has a %.0f percentile score of %d over %d records", subredditName, percentile, score, cnt)
 	return
 }
 
@@ -330,5 +325,6 @@ func (this *Persistence) GetPostsForSubredditScores(
         LIMIT 3000
     `
 	whereClause = fmt.Sprintf(whereClause, strings.Join(criteria, " OR "))
+	log.Debugf("Getting posts in subreddits with minimum scores: %s", whereClause)
 	return this.GetPosts(whereClause, minTime)
 }
