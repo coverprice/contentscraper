@@ -146,6 +146,7 @@ var htmlImageTemplateStr = `
                         <div class="col alert alert-info">
                             <a href="https://www.reddit.com{{.Permalink}}">{{.Title}}</a>
                             <small>Score: {{.Score}}</small>
+                            <small>Days old: {{.AgeInDays}}</small>
                             <small class="text-muted">{{.SubredditName}}</small>
                         </div>
                     </div>
@@ -258,11 +259,7 @@ func getPagelinks(feedname string, pageNum, numPages int) (links []pagelink) {
 	}
 	links = append(links, link)
 
-	for i := -2; i < 3; i++ {
-		pn := pageNum + i
-		if pn <= 0 || pn > numPages {
-			continue
-		}
+	for pn := 1; pn <= numPages; pn++ {
 		link = pagelink{
 			Text:          fmt.Sprintf("%d", pn),
 			Link:          ConstructUrl(&feedname, pn),
