@@ -56,7 +56,7 @@ func (this *HtmlViewerRequestHandler) getPostsImpl(
 	}
 
 	// Decorate the posts with the age in days.
-	decoratePostAge(now, posts)
+	decoratePostAge(getTimeBoundary(now), posts)
 
 	// Sort posts by feed, age_in_days, score DESC
 	sortPostsByFeedAgeScore(posts)
@@ -77,7 +77,7 @@ func (this *HtmlViewerRequestHandler) getPostsImpl(
 	return
 }
 
-func decoratePostAge(now int64, posts []annotatedPost) {
+func getTimeBoundary(now int64) int64 {
 	// Determine when the next "3am" from now is.
 	t := time.Unix(now, 0)
 	day := t.Day()
@@ -85,10 +85,17 @@ func decoratePostAge(now int64, posts []annotatedPost) {
 		day++
 	}
 	// The unix time considered to be the start of "0 days old".
-	timeBoundary := time.Date(t.Year(), t.Month(), day, 3, 0, 0, 0, t.Location()).Unix()
+	return time.Date(t.Year(), t.Month(), day, 3, 0, 0, 0, t.Location()).Unix()
+}
 
+func decoratePostAge(timeBoundary int64, posts []annotatedPost) {
+	const oneDay = 24 * 60 * 60
 	for i, _ := range posts {
-		posts[i].AgeInDays = (timeBoundary - posts[i].TimeStored) / (24 * 60 * 60)
+		delta := (timeBoundary - posts[i].TimeStored)
+		if delta < 0 {
+			delta -= oneDay
+		}
+		posts[i].AgeInDays = delta / oneDay
 	}
 }
 
