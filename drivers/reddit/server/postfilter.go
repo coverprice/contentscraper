@@ -58,9 +58,6 @@ func (this *HtmlViewerRequestHandler) getPostsImpl(
 	// Decorate the posts with the age in days.
 	decoratePostAge(getTimeBoundary(now), posts)
 
-	// Sort posts by feed, age_in_days, score DESC
-	sortPostsByFeedAgeScore(posts)
-
 	// Convert image links into embedded links
 	decoratePostsWithMediaLinks(posts)
 
@@ -128,30 +125,22 @@ func (a ByFeedAgeScore) Less(i, j int) bool {
 		return a[i].SubredditName < a[j].SubredditName
 	}
 }
-func sortPostsByFeedAgeScore(posts []annotatedPost) {
-	sort.Sort(ByFeedAgeScore(posts))
-}
 
-type ByAgeTimeStoredId []annotatedPost
+type ByTimeStoredId []annotatedPost
 
-func (a ByAgeTimeStoredId) Len() int      { return len(a) }
-func (a ByAgeTimeStoredId) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a ByAgeTimeStoredId) Less(i, j int) bool {
-	if a[i].AgeInDays == a[j].AgeInDays {
-		if a[i].TimeStored == a[j].TimeStored {
-			// Id ASC
-			return a[i].Id < a[j].Id
-		} else {
-			// TimeStored DESC
-			return a[i].TimeStored > a[j].TimeStored
-		}
+func (a ByTimeStoredId) Len() int      { return len(a) }
+func (a ByTimeStoredId) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByTimeStoredId) Less(i, j int) bool {
+	if a[i].TimeStored == a[j].TimeStored {
+		// Id ASC
+		return a[i].Id < a[j].Id
 	} else {
-		// AgeInDays ASC
-		return a[i].AgeInDays < a[j].AgeInDays
+		// TimeStored DESC
+		return a[i].TimeStored > a[j].TimeStored
 	}
 }
 func sortPostsIntoDisplayOrder(posts []annotatedPost) {
-	sort.Sort(ByAgeTimeStoredId(posts))
+	sort.Sort(ByTimeStoredId(posts))
 }
 
 func filterOutEmptyImages(posts []annotatedPost) (results []annotatedPost) {
@@ -169,6 +158,9 @@ func filterByMaxDailyPosts(posts []annotatedPost, feed *config.RedditFeed) (resu
 		subredditToMaxDailyPosts[subreddit.Name] = subreddit.MaxDailyPosts
 	}
 
+	// Sort posts by Subreddit, AgeInDays, Score(DESC)
+	sort.Sort(ByFeedAgeScore(posts))
+
 	// posts are expected to be sorted by Subreddit / AgeInDays / Score (DESC)
 	dailyPostCnt := 0
 	currentSubreddit := ""
@@ -180,7 +172,7 @@ func filterByMaxDailyPosts(posts []annotatedPost, feed *config.RedditFeed) (resu
 			dailyPostCnt = 0
 		}
 		dailyPostCnt++
-		if dailyPostCnt < subredditToMaxDailyPosts[currentSubreddit] {
+		if dailyPostCnt <= subredditToMaxDailyPosts[currentSubreddit] {
 			results = append(results, post)
 		}
 	}
