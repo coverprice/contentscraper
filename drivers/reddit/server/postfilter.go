@@ -3,7 +3,7 @@ package server
 import (
 	"github.com/coverprice/contentscraper/config"
 	"github.com/coverprice/contentscraper/drivers/reddit/types"
-	"github.com/coverprice/contentscraper/server/htmlutil"
+	"github.com/coverprice/contentscraper/server/medialink"
 	log "github.com/sirupsen/logrus"
 	"sort"
 	"time"
@@ -12,7 +12,7 @@ import (
 type annotatedPost struct {
 	types.RedditPost
 	AgeInDays int64 // how many days old this post is.
-	MediaLink *htmlutil.MediaLink
+	MediaLink *medialink.MediaLink
 }
 
 type cachedPosts struct {
@@ -100,7 +100,7 @@ func decoratePostsWithMediaLinks(posts []annotatedPost) {
 	var err error
 	for i, _ := range posts {
 		if posts[i].Url != "" {
-			if posts[i].MediaLink, err = htmlutil.UrlToEmbedUrl(posts[i].Url); err != nil {
+			if posts[i].MediaLink, err = medialink.UrlToMediaLink(posts[i].Url); err != nil {
 				log.Error("Error trying to convert post URL to MediaLink", err)
 			}
 		}
