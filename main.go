@@ -114,7 +114,8 @@ func harvestLoop(quit chan bool) {
 		}
 
 		log.Infof("Harvest complete. Waiting for %d minutes...", harvestInterval)
-		if !timeout.Stop() {
+		if !timeout.Stop() && len(timeout.C) > 0 {
+			// If we don't check for the channel length, this channel clear blocks forever...
 			<-timeout.C
 		}
 		timeout.Reset(time.Duration(harvestInterval) * time.Minute)
