@@ -1,8 +1,8 @@
 package server
 
 import (
-	"github.com/coverprice/contentscraper/config"
 	"github.com/coverprice/contentscraper/drivers"
+	"github.com/coverprice/contentscraper/drivers/reddit/types"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
@@ -16,28 +16,23 @@ var _ http.Handler = &HttpHandler{}
 // It knows the base URL and understands Http. It parses the URL and delegates
 // the response to the HtmlViewerRequestHandler.
 type HttpHandler struct {
-	feeds          map[string]config.RedditFeed
 	requestHandler IRequestHandler
 }
 
 func NewHttpHandler(requestHandler IRequestHandler) *HttpHandler {
 	handler := HttpHandler{
-		feeds:          make(map[string]config.RedditFeed),
 		requestHandler: requestHandler,
 	}
 	return &handler
 }
 
-func (this *HttpHandler) AddFeed(feed config.RedditFeed) {
-	this.feeds[feed.Name] = feed
-}
-
-func (this *HttpHandler) GetFeedsForServer() []drivers.Feed {
-	var ret []drivers.Feed
-	for _, redditfeed := range this.feeds {
+func (this *HttpHandler) GetFeedsForServer() (ret []drivers.Feed) {
+	for _, feedregistryitem := range types.FeedRegistry.GetAllItems() {
 		ret = append(ret, drivers.Feed{
-			Name:        redditfeed.Name,
-			Description: redditfeed.Description,
+			Name:              feedregistryitem.RedditFeed.Name,
+			Description:       feedregistryitem.RedditFeed.Description,
+			Status:            feedregistryitem.Status,
+			TimeLastHarvested: feedregistryitem.TimeLastHarvested,
 		})
 	}
 	return ret
@@ -50,8 +45,8 @@ func (this HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	feedname := values.Get("feed")
-	feed, ok := this.feeds[feedname]
-	if !ok {
+	feed, err := types.FeedRegistry.GetItemByName(feedname)
+	if err != nil {
 		log.Errorf("Unknown reddit feed name: '%s'", feedname)
 		http.NotFound(w, r)
 		return
@@ -66,5 +61,5 @@ func (this HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request. Cannot parse page number", 500)
 		return
 	}
-	this.requestHandler.HandleFeed(&feed, pagenum, w)
+	this.requestHandler.HandleFeed(&feed.RedditFeed, pagenum, w)
 }

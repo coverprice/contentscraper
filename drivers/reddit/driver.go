@@ -55,7 +55,6 @@ func NewRedditDriver(
 
 	for _, feed := range conf.Reddit.Feeds {
 		types.FeedRegistry.AddItem(&feed)
-		httpHandler.AddFeed(feed)
 	}
 
 	return &RedditDriver{

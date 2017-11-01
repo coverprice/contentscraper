@@ -26,7 +26,6 @@ func (this *TFeedRegistry) AddItem(feed *config.RedditFeed) {
 	(*this)[fri.RedditFeed.Name] = &fri
 }
 
-// TODO: Remove this if not used anywhere
 func (this *TFeedRegistry) GetItemByName(feedname string) (*FeedRegistryItem, error) {
 	item, ok := (*this)[feedname]
 	if !ok {
