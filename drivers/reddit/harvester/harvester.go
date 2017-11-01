@@ -54,7 +54,7 @@ func (this *Harvester) Harvest() (err error) {
 }
 
 func (this *Harvester) pullSource(sourceConfig types.SubredditSourceConfig) (err error) {
-	log.Info("Pulling from source '%s'", sourceConfig.Subreddit)
+	log.Infof("Pulling from source '%s'", sourceConfig.Subreddit)
 	var now = int64(time.Now().Unix())
 
 	var context = scrape.NewContextForHot(sourceConfig.Subreddit)
