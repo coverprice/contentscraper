@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"github.com/coverprice/contentscraper/config"
 	"github.com/coverprice/contentscraper/database"
-	"github.com/coverprice/contentscraper/drivers"
 	persist "github.com/coverprice/contentscraper/drivers/reddit/persistence"
 	scrape "github.com/coverprice/contentscraper/drivers/reddit/scraper"
 	"github.com/coverprice/contentscraper/drivers/reddit/types"
@@ -25,11 +24,16 @@ func TestHarvesterRetrievesAndStoresPosts(t *testing.T) {
 	var harvester = getSut(t, testDb.DbConn)
 
 	// add a source
-	harvester.AddSourceConfig(
-		types.SubredditSourceConfig{
-			Subreddit: "funny",
+	types.FeedRegistry.AddItem(&config.RedditFeed{
+		Name: "test feed",
+		Subreddits: []config.Subreddit{
+			config.Subreddit{
+				Name:          "funny",
+				Percentile:    100.0,
+				MaxDailyPosts: 20,
+			},
 		},
-	)
+	})
 
 	// run the harvester
 	t.Log("Beginning harvest")

@@ -54,10 +54,8 @@ func NewRedditDriver(
 	httpHandler := server.NewHttpHandler(htmlViewerRequestHandler)
 
 	for _, feed := range conf.Reddit.Feeds {
+		types.FeedRegistry.AddItem(&feed)
 		httpHandler.AddFeed(feed)
-		for _, subreddit := range feed.Subreddits {
-			harvester.AddSourceConfig(types.SubredditSourceConfig{Subreddit: subreddit.Name})
-		}
 	}
 
 	return &RedditDriver{

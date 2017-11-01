@@ -30,10 +30,3 @@ type SubredditSourceConfig struct {
 func (this *SubredditSourceConfig) GetSourceConfigId() drivers.SourceConfigId {
 	return drivers.SourceConfigId(fmt.Sprintf("reddit:%s", this.Subreddit))
 }
-
-type SubredditFeed struct {
-	Name          string
-	Description   string
-	Media         string
-	SourceConfigs []SubredditSourceConfig
-}

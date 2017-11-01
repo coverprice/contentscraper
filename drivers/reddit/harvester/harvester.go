@@ -1,6 +1,7 @@
 package reddit
 
 import (
+	"github.com/coverprice/contentscraper/drivers"
 	persist "github.com/coverprice/contentscraper/drivers/reddit/persistence"
 	scrape "github.com/coverprice/contentscraper/drivers/reddit/scraper"
 	"github.com/coverprice/contentscraper/drivers/reddit/types"
@@ -19,7 +20,6 @@ import (
 type Harvester struct {
 	scraper           *scrape.Scraper
 	persistence       *persist.Persistence
-	sources           []types.SubredditSourceConfig
 	MaxPagesToScrape  int     // Maximum # of pages to scrape (per source)
 	MinPostsPerScrape int     // Min posts in scrape result to continue
 	MinNewPostPercent float64 // Min new posts in scrape result to continue.
@@ -33,23 +33,32 @@ func NewHarvester(
 	return &Harvester{
 		scraper:           scraper,
 		persistence:       persistence,
-		sources:           make([]types.SubredditSourceConfig, 0),
 		MaxPagesToScrape:  10,
 		MinPostsPerScrape: 10,
 		MinNewPostPercent: 20.0,
 	}, nil
 }
 
-func (this *Harvester) AddSourceConfig(sc types.SubredditSourceConfig) {
-	this.sources = append(this.sources, sc)
-}
-
 func (this *Harvester) Harvest() (err error) {
-	for _, source := range this.sources {
-		if err = this.pullSource(source); err != nil {
-			return
+	for _, feed := range types.FeedRegistry.GetAllItems() {
+		// TODO: Not super essential, but it's more correct to put a mutex around updating these feed fields.
+		feed.Status = drivers.FEEDSTATUS_HARVESTING
+		feed.TimeLastHarvested = int64(time.Now().Unix())
+
+	NextSubreddit:
+		for _, subreddit := range feed.RedditFeed.Subreddits {
+			source := types.SubredditSourceConfig{
+				Subreddit: subreddit.Name,
+			}
+			if err = this.pullSource(source); err != nil {
+				feed.Status = drivers.FEEDSTATUS_ERROR
+				continue NextSubreddit
+			}
 		}
+
+		feed.Status = drivers.FEEDSTATUS_IDLE
 	}
+
 	return
 }
 

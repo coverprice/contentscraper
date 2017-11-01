@@ -31,6 +31,16 @@ type ISourceConfig interface {
 // Feed is a data object returned by a Driver to describe a feed.
 // It's used by the HTTP server to construct links to a specific feed.
 type Feed struct {
-	Name        string
-	Description string
+	Name              string
+	Description       string
+	Status            FeedStatus
+	TimeLastHarvested int64
 }
+
+type FeedStatus int
+
+const (
+	FEEDSTATUS_IDLE FeedStatus = 0
+	FEEDSTATUS_HARVESTING
+	FEEDSTATUS_ERROR
+)
