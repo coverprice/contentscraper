@@ -45,6 +45,7 @@ var htmlImageTemplateStr = `
         let el = image.img;
         if (!image.isLoaded) {
             console.log("Failed to load image: " + el.src);
+	    $(el).closest('div.feeditem').remove();
             return;
         }
         let el_w = el.naturalWidth || el.videoWidth || el.width;
