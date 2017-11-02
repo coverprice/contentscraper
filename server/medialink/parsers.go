@@ -101,7 +101,7 @@ func (this giphyParser) GetMediaLink(l link) (ml *MediaLink, handled bool) {
 type gfycatParser struct{}
 
 // http://gfycat.com/SomeId
-var gfycatIdRe = regexp.MustCompile(`^/([[:alnum:]]+)`)
+var gfycatIdRe = regexp.MustCompile(`^/+([[:alnum:]]+)`)
 
 func (this gfycatParser) GetMediaLink(l link) (ml *MediaLink, handled bool) {
 	if !toolbox.InDomain("gfycat.com", l.Host) {

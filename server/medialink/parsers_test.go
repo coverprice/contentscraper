@@ -62,3 +62,11 @@ func TestGfycatParserEmbedsBlankLinks(t *testing.T) {
 	require.NotNil(t, medialink)
 	require.NotEqual(t, `"https://gfycat.com/ifr/xYzz123"`, string(medialink.Embed))
 }
+
+func TestGfycatParserSupportsMultipleLeadingSlashes(t *testing.T) {
+	link := makeLink(t, "https://gfycat.com//xYzz123")
+	medialink, handled := gfycatParser{}.GetMediaLink(link)
+	require.True(t, handled)
+	require.NotNil(t, medialink)
+	require.NotEqual(t, `"https://gfycat.com/ifr/xYzz123"`, string(medialink.Embed))
+}
