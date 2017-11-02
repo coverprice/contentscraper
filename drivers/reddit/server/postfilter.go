@@ -31,7 +31,7 @@ func (this *HtmlViewerRequestHandler) getPosts(
 	now := int64(time.Now().Unix())
 
 	cache, ok := postCache[feed.Name]
-	if !ok || (cache.TimeCreated+6*60*60 < now) {
+	if !ok || (cache.TimeCreated+1*60*60 < now) {
 		posts, err = this.getPostsImpl(now, feed)
 		if err != nil {
 			return
