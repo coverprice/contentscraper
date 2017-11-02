@@ -5,6 +5,7 @@ import (
 	"github.com/coverprice/contentscraper/drivers"
 	"github.com/coverprice/contentscraper/server/htmlutil"
 	log "github.com/sirupsen/logrus"
+	"math"
 	"net/http"
 	"sort"
 	"strings"
@@ -24,9 +25,9 @@ var indexTemplateStr = `
     });
 
     function moveToMenuIdx(idx) {
-      $('.mainmenu.active').removeClass('active');
+      $('.mainmenu.table-primary').removeClass('table-primary');
       let item = $('.mainmenu').eq(idx);
-      item.addClass('active');
+      item.addClass('table-primary');
       menuIdx = idx;
       menuUrl = item.find('a')[0].href;
     }
@@ -56,14 +57,17 @@ var indexTemplateStr = `
     {{end}}
     {{define "content"}}
     <div class="container">
-    <ul class="list-group">
+    <table class="table">
+    <tbody>
         {{range .DriverFeeds}}
-            <li class="list-group-item mainmenu">
-                <a href="{{.BaseUrl}}/?feed={{.Feed.Name}}">{{.Feed.Name}} - {{.Feed.Description}}</a>
-                {{.StatusText}}
-            </li>
+            <tr class="mainmenu">
+                <td><a href="{{.BaseUrl}}/?feed={{.Feed.Name}}">{{.Feed.Name}}</td>
+                <td><a href="{{.BaseUrl}}/?feed={{.Feed.Name}}">{{.Feed.Description}}</td>
+                <td><small class="text-muted">{{.StatusText}}</small></td>
+            </tr>
         {{end}}
-    </ul>
+    </tbody>
+    </table>
     </div>
     {{end}}
 `
@@ -134,7 +138,7 @@ func getStatusText(feed drivers.Feed) string {
 			return "Not harvested yet"
 		}
 		duration := time.Now().Sub(time.Unix(feed.TimeLastHarvested, 0))
-		return fmt.Sprintf("%02d:%02d ago", duration.Hours(), duration.Minutes())
+		return fmt.Sprintf("%02.0f:%02.0f ago", math.Floor(duration.Hours()), math.Floor(duration.Minutes()))
 	case drivers.FEEDSTATUS_ERROR:
 		return "Error"
 	case drivers.FEEDSTATUS_HARVESTING:
