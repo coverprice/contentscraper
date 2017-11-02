@@ -1,12 +1,14 @@
 package server
 
 import (
+	"fmt"
 	"github.com/coverprice/contentscraper/drivers"
 	"github.com/coverprice/contentscraper/server/htmlutil"
-	// log "github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"net/http"
-	"strings"
 	"sort"
+	"strings"
+	"time"
 )
 
 var indexTemplateStr = `
@@ -58,6 +60,7 @@ var indexTemplateStr = `
         {{range .DriverFeeds}}
             <li class="list-group-item mainmenu">
                 <a href="{{.BaseUrl}}/?feed={{.Feed.Name}}">{{.Feed.Name}} - {{.Feed.Description}}</a>
+                {{.StatusText}}
             </li>
         {{end}}
     </ul>
@@ -75,10 +78,10 @@ type indexHandler struct {
 }
 
 type driverFeed struct {
-    BaseUrl string
-    Feed    drivers.Feed
+	BaseUrl    string
+	Feed       drivers.Feed
+	StatusText string
 }
-
 
 func (this indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// The "/" pattern matches everything, so we need to check
@@ -93,8 +96,9 @@ func (this indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var baseUrl = strings.TrimRight(driver.GetBaseUrlPath(), "/")
 		for _, feed := range driver.GetFeeds() {
 			allfeeds = append(allfeeds, driverFeed{
-				BaseUrl: baseUrl,
-				Feed:    feed,
+				BaseUrl:    baseUrl,
+				Feed:       feed,
+				StatusText: getStatusText(feed),
 			})
 		}
 	}
@@ -121,4 +125,22 @@ func (a ByFeedName) Len() int      { return len(a) }
 func (a ByFeedName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a ByFeedName) Less(i, j int) bool {
 	return a[i].Feed.Name < a[j].Feed.Name
+}
+
+func getStatusText(feed drivers.Feed) string {
+	switch feed.Status {
+	case drivers.FEEDSTATUS_IDLE:
+		if feed.TimeLastHarvested == 0 {
+			return "Not harvested yet"
+		}
+		duration := time.Now().Sub(time.Unix(feed.TimeLastHarvested, 0))
+		return fmt.Sprintf("%02d:%02d ago", duration.Hours(), duration.Minutes())
+	case drivers.FEEDSTATUS_ERROR:
+		return "Error"
+	case drivers.FEEDSTATUS_HARVESTING:
+		return "Harvesting"
+	default:
+		log.Errorf("Unsupported status: %v", feed.Status)
+		return "Error"
+	}
 }
