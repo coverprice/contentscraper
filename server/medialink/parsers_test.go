@@ -2,6 +2,7 @@ package medialink
 
 import (
 	"github.com/stretchr/testify/require"
+	"strings"
 	"testing"
 )
 
@@ -44,7 +45,7 @@ func TestGiphyParserConvertsMediaLinks(t *testing.T) {
 	medialink, handled := giphyParser{}.GetMediaLink(link)
 	require.True(t, handled)
 	require.NotNil(t, medialink)
-	require.NotEqual(t, `"https://giphy.com/embed/xyzz"`, string(medialink.Embed))
+	require.True(t, strings.Contains(string(medialink.Embed), `"https://giphy.com/embed/xyzz"`))
 }
 
 func TestGiphyParserConvertsLegibleUrls(t *testing.T) {
@@ -52,7 +53,7 @@ func TestGiphyParserConvertsLegibleUrls(t *testing.T) {
 	medialink, handled := giphyParser{}.GetMediaLink(link)
 	require.True(t, handled)
 	require.NotNil(t, medialink)
-	require.NotEqual(t, `"https://giphy.com/embed/xyzz"`, string(medialink.Embed))
+	require.True(t, strings.Contains(string(medialink.Embed), `"https://giphy.com/embed/xyzz"`))
 }
 
 func TestGfycatParserEmbedsBlankLinks(t *testing.T) {
@@ -60,7 +61,7 @@ func TestGfycatParserEmbedsBlankLinks(t *testing.T) {
 	medialink, handled := gfycatParser{}.GetMediaLink(link)
 	require.True(t, handled)
 	require.NotNil(t, medialink)
-	require.NotEqual(t, `"https://gfycat.com/ifr/xYzz123"`, string(medialink.Embed))
+	require.True(t, strings.Contains(string(medialink.Embed), `"https://gfycat.com/ifr/xYzz123"`))
 }
 
 func TestGfycatParserSupportsMultipleLeadingSlashes(t *testing.T) {
@@ -68,5 +69,13 @@ func TestGfycatParserSupportsMultipleLeadingSlashes(t *testing.T) {
 	medialink, handled := gfycatParser{}.GetMediaLink(link)
 	require.True(t, handled)
 	require.NotNil(t, medialink)
-	require.NotEqual(t, `"https://gfycat.com/ifr/xYzz123"`, string(medialink.Embed))
+	require.True(t, strings.Contains(string(medialink.Embed), `"https://gfycat.com/ifr/xYzz123"`))
+}
+
+func TestGfycatParserSupportsGifDetail(t *testing.T) {
+	link := makeLink(t, "https://gfycat.com/gifs/detail/xYzz123")
+	medialink, handled := gfycatParser{}.GetMediaLink(link)
+	require.True(t, handled)
+	require.NotNil(t, medialink)
+	require.True(t, strings.Contains(string(medialink.Embed), `"https://gfycat.com/ifr/xYzz123"`))
 }

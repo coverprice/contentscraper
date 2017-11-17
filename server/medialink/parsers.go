@@ -101,7 +101,7 @@ func (this giphyParser) GetMediaLink(l link) (ml *MediaLink, handled bool) {
 type gfycatParser struct{}
 
 // http://gfycat.com/SomeId
-var gfycatIdRe = regexp.MustCompile(`^/+([[:alnum:]]+)`)
+var gfycatIdRe = regexp.MustCompile(`^/+(?:gifs/detail/)?([[:alnum:]]+)`)
 
 func (this gfycatParser) GetMediaLink(l link) (ml *MediaLink, handled bool) {
 	if !toolbox.InDomain("gfycat.com", l.Host) {
@@ -112,7 +112,7 @@ func (this gfycatParser) GetMediaLink(l link) (ml *MediaLink, handled bool) {
 
 		// This is from gfycat's website.
 		html := `<div style="position:relative;padding-bottom:54%">` +
-			`<iframe src="https://gfycat.com/ifr` + l.Url.Path + `"` +
+			`<iframe src="https://gfycat.com/ifr/` + matches[1] + `"` +
 			` frameborder="0" scrolling="no" width="100%" height="100%"` +
 			` style="position:absolute;top:0;left:0" allowfullscreen>` +
 			`</iframe>` +
