@@ -17,7 +17,7 @@ func InDomain(domain, candidate string) bool {
 func MatchString(pattern, candidate string) bool {
 	result, err := regexp.MatchString(pattern, candidate)
 	if err != nil {
-		log.Fatal("Invalid pattern: %s", pattern)
+		log.Fatalf("Invalid pattern: %s", pattern)
 	}
 	return result
 }

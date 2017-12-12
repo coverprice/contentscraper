@@ -43,7 +43,7 @@ func InitLogging(logFilename string) {
 
 	logLevel, err := log.ParseLevel(logLevelFlag)
 	if err != nil {
-		log.Fatal("Invalid log level: '%s'", logLevel)
+		log.Fatalf("Invalid log level: '%s'", logLevel)
 	}
 	log.SetLevel(logLevel)
 }

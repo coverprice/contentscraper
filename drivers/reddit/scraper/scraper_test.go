@@ -13,12 +13,12 @@ func initTestScraper(t *testing.T) *Scraper {
 	var err error
 
 	if conf, err = config.GetConfig(); err != nil {
-		t.Error("Could not load/parse config file: %v", err)
+		t.Errorf("Could not load/parse config file: %v", err)
 	}
 
 	var scraper *Scraper
 	if scraper, err = NewScraperFromConfig(conf); err != nil {
-		t.Error("Could not initialize Scraper: %v", err)
+		t.Errorf("Could not initialize Scraper: %v", err)
 	}
 	return scraper
 }
