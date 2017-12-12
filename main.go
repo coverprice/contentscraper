@@ -4,6 +4,10 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/coverprice/contentscraper/config"
 	"github.com/coverprice/contentscraper/database"
 	"github.com/coverprice/contentscraper/drivers"
@@ -136,6 +140,13 @@ func main() {
 	if isHarvestingEnabled {
 		beginHarvest()
 	}
+
 	log.Info("Launching web service")
-	webServer.Launch()
+	go webServer.Launch()
+	sig := make(chan os.Signal)
+
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	s := <-sig
+	log.Infof("Received signal %s, shutting down", s)
+	os.Exit(0)
 }
