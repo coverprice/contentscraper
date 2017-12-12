@@ -138,7 +138,7 @@ func getStatusText(feed drivers.Feed) string {
 			return "Not harvested yet"
 		}
 		duration := time.Now().Sub(time.Unix(feed.TimeLastHarvested, 0))
-		return fmt.Sprintf("%02.0f:%02.0f ago", math.Floor(duration.Hours()), math.Floor(duration.Minutes()))
+		return fmt.Sprintf("%02d:%02d ago", int(math.Floor(duration.Hours())), int(math.Floor(duration.Minutes()))%60)
 	case drivers.FEEDSTATUS_ERROR:
 		return "Error"
 	case drivers.FEEDSTATUS_HARVESTING:
