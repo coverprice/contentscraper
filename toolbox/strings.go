@@ -1,5 +1,7 @@
 package toolbox
 
+// TruncateStr will truncate a string to the given length. If the string is truncated,
+// '...' is added.
 func TruncateStr(s string, maxlen int) string {
 	if len(s) <= maxlen {
 		return s

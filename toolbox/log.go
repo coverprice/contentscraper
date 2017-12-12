@@ -2,10 +2,11 @@ package toolbox
 
 import (
 	"flag"
-	"github.com/mattn/go-colorable"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"runtime"
+
+	"github.com/mattn/go-colorable"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -38,6 +39,7 @@ func initLogOutput(logFilename string) {
 	return
 }
 
+// InitLogging initializes the logging for the application.
 func InitLogging(logFilename string) {
 	initLogOutput(logFilename)
 

@@ -1,11 +1,12 @@
 package reddit
 
 import (
+	"testing"
+
 	"github.com/coverprice/contentscraper/config"
 	"github.com/coverprice/contentscraper/drivers/reddit/types"
 	"github.com/coverprice/contentscraper/toolbox"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func initTestScraper(t *testing.T) *Scraper {

@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// DoesFileExist returns true if the given file exists and is not a directory.
 func DoesFileExist(filepath string) bool {
 	if stat, err := os.Stat(filepath); err == nil {
 		if !stat.IsDir() {
@@ -16,6 +17,7 @@ func DoesFileExist(filepath string) bool {
 	return false
 }
 
+// DoesDirExist returns true if the given path exists and is a directory.
 func DoesDirExist(dirpath string) bool {
 	if stat, err := os.Stat(dirpath); err == nil {
 		return stat.IsDir()

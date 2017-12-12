@@ -15,29 +15,31 @@ import (
 	"github.com/coverprice/contentscraper/server"
 	"github.com/coverprice/contentscraper/toolbox"
 	//"github.com/davecgh/go-spew/spew"
-	log "github.com/sirupsen/logrus"
+
 	"path"
 	"path/filepath"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (
-	waitgroup           sync.WaitGroup
-	sourceDrivers       []drivers.IDriver
-	quitChannels        []chan bool
-	harvestInterval     int
-	logFilename         string
-	logLevelFlag        string
-	isHarvestingEnabled bool
-	webServer           *server.Server
-	port                int
+	waitgroup        sync.WaitGroup
+	sourceDrivers    []drivers.IDriver
+	quitChannels     []chan bool
+	harvestInterval  int
+	logFilename      string
+	logLevelFlag     string
+	isHarvestEnabled bool
+	webServer        *server.Server
+	port             int
 )
 
 func init() {
 	flag.IntVar(&harvestInterval, "harvest-interval", 60*6, "Minutes to wait between harvest runs")
 	flag.StringVar(&logFilename, "logfile", "", "Log to the given file. (absolute or relative to storage directory)")
-	flag.BoolVar(&isHarvestingEnabled, "enable-harvest", true, "False to disable harvesting posts")
+	flag.BoolVar(&isHarvestEnabled, "enable-harvest", true, "False to disable harvesting posts")
 	flag.IntVar(&port, "port", 8080, "Port to listen on")
 }
 
@@ -95,11 +97,11 @@ func shutdown() {
 }
 
 func beginHarvest() {
-	var quit_chan = make(chan bool)
-	quitChannels = append(quitChannels, quit_chan)
+	var quitChan = make(chan bool)
+	quitChannels = append(quitChannels, quitChan)
 
 	waitgroup.Add(1)
-	go harvestLoop(quit_chan)
+	go harvestLoop(quitChan)
 }
 
 func harvestLoop(quit chan bool) {
@@ -137,7 +139,7 @@ func main() {
 	initialize()
 	defer shutdown()
 
-	if isHarvestingEnabled {
+	if isHarvestEnabled {
 		beginHarvest()
 	}
 

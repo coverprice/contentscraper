@@ -1,8 +1,9 @@
 package toolbox
 
 import (
-	log "github.com/sirupsen/logrus"
 	"regexp"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // InDomain returns true if the candidate hostname == or is sub-ordinate to the given domain,

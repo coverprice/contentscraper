@@ -40,7 +40,7 @@ type Feed struct {
 type FeedStatus int
 
 const (
-	FEEDSTATUS_IDLE FeedStatus = 0
+	FEEDSTATUS_IDLE       FeedStatus = 0
 	FEEDSTATUS_HARVESTING FeedStatus = 1
-	FEEDSTATUS_ERROR FeedStatus = 2
+	FEEDSTATUS_ERROR      FeedStatus = 2
 )
