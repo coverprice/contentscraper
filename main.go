@@ -57,7 +57,7 @@ func initialize() (err error) {
 	}
 
 	log.Debug("Initializing database.")
-	database.Initialize(conf.BackendStorePath)
+	database.SetConfig(conf.BackendStorePath)
 
 	// Init RedditDriver
 	log.Debug("Initializing Reddit driver.")
