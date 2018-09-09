@@ -16,17 +16,22 @@ const (
 	MEDIA_TYPE_IMAGE = "image"
 )
 
+// Config is a struct that stores the configs of each type of data source.
+// (Note: While Twitter's config is supported, the actual harvesting code has
+// not been implemented yet)
 type Config struct {
 	Reddit           RedditConfig  `json:"reddit"`
 	Twitter          TwitterConfig `json:"twitter"`
 	BackendStorePath string        // Path to the database file
 }
 
+// RedditConfig is a struct that stores all Reddit-related configuration.
 type RedditConfig struct {
 	Secrets RedditSecrets `json:"secrets"`
 	Feeds   []RedditFeed  `json:"feeds"`
 }
 
+// RedditSecrets stores the credentials used by the harvesting robot account.
 type RedditSecrets struct {
 	ClientId     string `json:"clientid"`
 	ClientSecret string `json:"clientsecret"`
@@ -37,7 +42,7 @@ type RedditSecrets struct {
 // RedditFeed describes the filtering configuration for feeds from Reddit sources, i.e. 1-many Subreddits.
 // It's expected that subreddits primarily share the same media type (text or graphics). E.g. a "images"
 // feed might include image-heavy subreddits like "funny" and "gifs", and a "text" feed might include
-// title-heavy subreddits like "legaladvice" or "showerthoughts".
+// text-heavy subreddits like "legaladvice" or "showerthoughts".
 type RedditFeed struct {
 	Name                 string      `json:"name"`
 	Description          string      `json:"description"`
@@ -47,6 +52,7 @@ type RedditFeed struct {
 	DefaultMaxDailyPosts int         `json:"max_daily_posts"`
 }
 
+// Validate returns nil if the RedditFeed structure is syntactically valid, or an error if it is not.
 func (this RedditFeed) Validate() (err error) {
 	if this.Name == "" {
 		return fmt.Errorf("Empty feed name")
@@ -76,6 +82,7 @@ type Subreddit struct {
 	MaxDailyPosts int     `json:"max_daily_posts"` // Maximum # of posts to include per day from this subreddit.
 }
 
+// Validate returns nil if the Subreddit structure is syntactically valid, or an error if it is not.
 func (this Subreddit) Validate() (err error) {
 	if this.Name == "" {
 		return fmt.Errorf("Empty subreddit name")
@@ -137,6 +144,7 @@ func (this TwitterFilter) Validate() (err error) {
 	return nil
 }
 
+// Validate returns nil if the Config structure is syntactically and semantically valid, otherwise it returns an error.
 func (this *Config) Validate() (err error) {
 	// validation is mainly concerned with ensuring that all feed names are unique
 	// across source types, that percentile values are within range, etc.
@@ -187,6 +195,40 @@ func (this *Config) Validate() (err error) {
 	return nil
 }
 
+func (this *Config) populateDefaults() {
+	// Populate defaults
+	for idx, redditfeed := range this.Reddit.Feeds {
+		if redditfeed.DefaultPercentile == 0 {
+			this.Reddit.Feeds[idx].DefaultPercentile = float64(defaultPercentile)
+		}
+		// Due to the way the Unmarshaller works, we can't differentiate between the config file specifying
+		// [Default]MaxDailyPosts = 0 vs not specifying anything at all. So the convention is that if the user
+		// wants [Default]MaxDailyPosts to be 0, then they should specify a negative number.
+		if redditfeed.DefaultMaxDailyPosts < 0 {
+			this.Reddit.Feeds[idx].DefaultMaxDailyPosts = 0
+		} else if redditfeed.DefaultMaxDailyPosts == 0 {
+			this.Reddit.Feeds[idx].DefaultMaxDailyPosts = defaultMaxDailyPosts
+		}
+
+		if redditfeed.Media == "" {
+			this.Reddit.Feeds[idx].Media = MEDIA_TYPE_TEXT
+		}
+		for subidx, subreddit := range redditfeed.Subreddits {
+			// Canonicalize subreddit name (i.e. lowercase)
+			this.Reddit.Feeds[idx].Subreddits[subidx].Name = strings.ToLower(subreddit.Name)
+			if subreddit.Percentile == 0 {
+				this.Reddit.Feeds[idx].Subreddits[subidx].Percentile = this.Reddit.Feeds[idx].DefaultPercentile
+			}
+			// See above.
+			if subreddit.MaxDailyPosts < 0 {
+				this.Reddit.Feeds[idx].Subreddits[subidx].MaxDailyPosts = 0
+			} else if subreddit.MaxDailyPosts == 0 {
+				this.Reddit.Feeds[idx].Subreddits[subidx].MaxDailyPosts = this.Reddit.Feeds[idx].DefaultMaxDailyPosts
+			}
+		}
+	}
+}
+
 func parseFromString(configblob string) (conf *Config, err error) {
 	conf = &Config{
 		Reddit: RedditConfig{
@@ -198,50 +240,16 @@ func parseFromString(configblob string) (conf *Config, err error) {
 		BackendStorePath: filepath.Join(storageDir, databaseFileName),
 	}
 
-	if err = yaml.Unmarshal([]byte(configblob), conf); err != nil {
-		return
-	}
-
-	// Populate defaults
-	for idx, redditfeed := range conf.Reddit.Feeds {
-		if redditfeed.DefaultPercentile == 0 {
-			conf.Reddit.Feeds[idx].DefaultPercentile = float64(defaultPercentile)
-		}
-		// Due to the way the Unmarshaller works, we can't differentiate between the config file specifying
-		// [Default]MaxDailyPosts = 0 vs not specifying anything at all. So the convention is that if the user
-		// wants [Default]MaxDailyPosts to be 0, then they should specify a negative number.
-		if redditfeed.DefaultMaxDailyPosts < 0 {
-			conf.Reddit.Feeds[idx].DefaultMaxDailyPosts = 0
-		} else if redditfeed.DefaultMaxDailyPosts == 0 {
-			conf.Reddit.Feeds[idx].DefaultMaxDailyPosts = defaultMaxDailyPosts
-		}
-
-		if redditfeed.Media == "" {
-			conf.Reddit.Feeds[idx].Media = MEDIA_TYPE_TEXT
-		}
-		for subidx, subreddit := range redditfeed.Subreddits {
-			// Canonicalize subreddit name (i.e. lowercase)
-			conf.Reddit.Feeds[idx].Subreddits[subidx].Name = strings.ToLower(subreddit.Name)
-			if subreddit.Percentile == 0 {
-				conf.Reddit.Feeds[idx].Subreddits[subidx].Percentile = conf.Reddit.Feeds[idx].DefaultPercentile
-			}
-			// See above.
-			if subreddit.MaxDailyPosts < 0 {
-				conf.Reddit.Feeds[idx].Subreddits[subidx].MaxDailyPosts = 0
-			} else if subreddit.MaxDailyPosts == 0 {
-				conf.Reddit.Feeds[idx].Subreddits[subidx].MaxDailyPosts = conf.Reddit.Feeds[idx].DefaultMaxDailyPosts
-			}
-		}
-	}
-
-	if err = conf.Validate(); err != nil {
-		return
-	}
-
-	// log.Fatal(spew.Sdump(conf))
+	// This will read the YAML and convert it into the structure defined above.
+	// If the file has a syntax mismatch with the object structure we've defined,
+	// the unmarshaller will return an error.
+	err = yaml.Unmarshal([]byte(configblob), conf)
 	return
 }
 
+// GetConfig finds and loads the config file into a Config structure, populates
+// default values where they have not been specified, and validates the result.
+// It returns a new Config structure.
 func GetConfig() (conf *Config, err error) {
 	configFilePath, err := locateConfigFile()
 	if err != nil {
@@ -253,8 +261,14 @@ func GetConfig() (conf *Config, err error) {
 		return nil, fmt.Errorf("Failed to read config file: %v", err)
 	}
 	var contents = string(raw_contents)
+
 	if conf, err = parseFromString(contents); err != nil {
 		return nil, fmt.Errorf("Failed to parse config file: %v", err)
 	}
+
+	conf.populateDefaults()
+
+	err = conf.Validate()
+	// log.Fatal(spew.Sdump(conf))
 	return
 }
