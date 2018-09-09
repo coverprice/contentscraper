@@ -40,6 +40,7 @@ func initLogOutput(logFilename string) {
 }
 
 // InitLogging initializes the logging for the application.
+// logFilename is an optional location for the file. If not specified, the logs go to stdout.
 func InitLogging(logFilename string) {
 	initLogOutput(logFilename)
 
