@@ -6,14 +6,10 @@ import (
 )
 
 const (
-	baseUrlPath = "/reddit/"
+	BaseUrlPath = "/reddit/"
 )
 
-func GetBaseUrlPath() string {
-	return baseUrlPath
-}
-
-func ConstructUrl(feedname *string, pagenum int) string {
+func constructUrl(feedname *string, pagenum int) string {
 	v := url.Values{}
 	if feedname != nil {
 		v.Set("feed", *feedname)
@@ -22,7 +18,7 @@ func ConstructUrl(feedname *string, pagenum int) string {
 		v.Add("page", fmt.Sprintf("%d", pagenum))
 	}
 	u := url.URL{
-		Path:     baseUrlPath,
+		Path:     BaseUrlPath,
 		RawQuery: v.Encode(),
 	}
 	return u.String()

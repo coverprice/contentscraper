@@ -64,11 +64,11 @@ func NewRedditDriver(
 }
 
 func (this *RedditDriver) GetBaseUrlPath() string {
-	return server.GetBaseUrlPath()
+	return server.BaseUrlPath
 }
 
 func (this *RedditDriver) GetFeeds() []drivers.Feed {
-	var ret []drivers.Feed{}
+	var ret = make([]drivers.Feed, 0)
 	for _, feedregistryitem := range types.FeedRegistry.GetAllItems() {
 		ret = append(ret, drivers.Feed{
 			Name:              feedregistryitem.RedditFeed.Name,

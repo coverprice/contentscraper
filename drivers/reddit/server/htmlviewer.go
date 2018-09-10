@@ -251,7 +251,7 @@ func (this *HtmlViewerRequestHandler) HandleFeed(
 func getPagelinks(feedname string, pageNum, numPages int) (links []pagelink) {
 	link := pagelink{
 		Text:          "Previous",
-		Link:          ConstructUrl(&feedname, pageNum-1),
+		Link:          constructUrl(&feedname, pageNum-1),
 		IsEnabled:     true,
 		IsHighlighted: false,
 	}
@@ -263,7 +263,7 @@ func getPagelinks(feedname string, pageNum, numPages int) (links []pagelink) {
 	for pn := 1; pn <= numPages; pn++ {
 		link = pagelink{
 			Text:          fmt.Sprintf("%d", pn),
-			Link:          ConstructUrl(&feedname, pn),
+			Link:          constructUrl(&feedname, pn),
 			IsEnabled:     true,
 			IsHighlighted: (pageNum == pn),
 		}
@@ -271,7 +271,7 @@ func getPagelinks(feedname string, pageNum, numPages int) (links []pagelink) {
 	}
 	link = pagelink{
 		Text:          "Next",
-		Link:          ConstructUrl(&feedname, pageNum+1),
+		Link:          constructUrl(&feedname, pageNum+1),
 		IsEnabled:     true,
 		IsHighlighted: false,
 	}
