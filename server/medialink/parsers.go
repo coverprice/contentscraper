@@ -4,16 +4,17 @@ import (
 	"github.com/coverprice/contentscraper/toolbox"
 	"html/template"
 	"regexp"
-	"strings"
+	// "strings"
 )
 
 type iSiteUrlParser interface {
 	GetMediaLink(
 		l link,
 	) (
-		ml *MediaLink, // The raw URL or HTML to embed this URL. May be nil.
+		// The raw URL or HTML to embed this URL. May be nil.
+		ml *MediaLink,
 		// True when this parser has successfully handled the input URL, meaning
-		// that the caller should not call any further drivers.
+		// that the caller should not call any further parsers.
 		handled bool,
 	)
 }
@@ -44,10 +45,13 @@ func (this imgurParser) GetMediaLink(l link) (ml *MediaLink, handled bool) {
 		return nil, false
 	}
 	switch {
-	// http://i.imgur.com/foooo.gifv --> http://i.imgur.com/foooo.mp4
 	case toolbox.MatchString(`\.gifv$`, l.Path):
+		// Normalize host to i.imgur.com
 		l.Url.Host = "i.imgur.com"
-		l.Url.Path = strings.TrimSuffix(l.Url.Path, ".gifv") + ".mp4"
+		// This used to be the transform, but it doesn't seem to work now. Leaving
+		// this here commented out for posterity.
+		// http://i.imgur.com/foooo.gifv --> http://i.imgur.com/foooo.mp4
+		// l.Url.Path = strings.TrimSuffix(l.Url.Path, ".gifv") + ".mp4"
 		return &MediaLink{Url: l.Url.String()}, true
 
 	// http://imgur.com/foooo --> http://i.imgur.com/2iiK88I.jpg

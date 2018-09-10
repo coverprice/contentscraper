@@ -7,6 +7,7 @@ import (
 	"net/http"
 )
 
+// The web server that displays the content scraped by the harvesting drivers.
 type Server struct {
 	server  http.Server
 	mux     *http.ServeMux

@@ -9,8 +9,8 @@ import (
 )
 
 // MediaLink contains either a Url to an image/video, or raw HTML that will embed such an image/video.
-// It is used as the result from RealMediaUrl, which attempts to analyze a Url to a site like imgur.com
-// or gfycat.com, and return a way of rendering that content.
+// It's the result from UrlToMediaLink(), which is a method that attempts to analyze a raw URL to a site
+// like imgur.com or gfycat.com, and return a way of rendering that content.
 type MediaLink struct {
 	Url   string        // Direct link (must construct <img> or <video> link yourself)
 	Embed template.HTML // raw HTML that will embed the image.
@@ -65,7 +65,6 @@ var parsers = []iSiteUrlParser{
 func UrlToMediaLink(rawurl string) (link *MediaLink, err error) {
 	l, err := newLink(rawurl)
 	if err != nil {
-		log.Warningf("Could not parse the URL: '%s' %v", rawurl, err)
 		return
 	}
 
@@ -75,6 +74,6 @@ func UrlToMediaLink(rawurl string) (link *MediaLink, err error) {
 			return
 		}
 	}
-	log.Debugf("Could not embed URL: '%s'", rawurl)
+	log.Debugf("No parser could undersand URL: '%s'", rawurl)
 	return nil, nil
 }
