@@ -42,7 +42,7 @@ func NewHarvester(
 func (this *Harvester) Harvest() (err error) {
 	for _, feed := range types.FeedRegistry.GetAllItems() {
 		// TODO: Not super essential, but it's more correct to put a mutex around updating these feed fields.
-		feed.Status = drivers.FEEDSTATUS_HARVESTING
+		feed.Status = drivers.FEEDHARVESTSTATUS_HARVESTING
 		feed.TimeLastHarvested = int64(time.Now().Unix())
 
 	NextSubreddit:
@@ -51,12 +51,12 @@ func (this *Harvester) Harvest() (err error) {
 				Subreddit: subreddit.Name,
 			}
 			if err = this.pullSource(source); err != nil {
-				feed.Status = drivers.FEEDSTATUS_ERROR
+				feed.Status = drivers.FEEDHARVESTSTATUS_ERROR
 				continue NextSubreddit
 			}
 		}
 
-		feed.Status = drivers.FEEDSTATUS_IDLE
+		feed.Status = drivers.FEEDHARVESTSTATUS_IDLE
 	}
 
 	return

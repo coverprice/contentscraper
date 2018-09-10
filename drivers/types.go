@@ -4,6 +4,30 @@ import (
 	"net/http"
 )
 
+// Feed is a data object returned by a Driver to describe a stream of posts,
+// that (depending on the Driver) may be from multiple sources. E.g. a "amusing"
+// Feed might include posts from /r/funny and /r/gifs.
+// It's used by the UI to allow the user to select a feed and explore the posts within.
+type Feed struct {
+	Name              string
+	Description       string
+	Status            FeedHarvestStatus
+	// The epoch time (in seconds) that this Feed was last harvested for content.
+	// 0 means it was never harvested.
+	TimeLastHarvested int64
+}
+
+type FeedHarvestStatus int
+
+const (
+	FEEDHARVESTSTATUS_IDLE       FeedHarvestStatus = 0
+	FEEDHARVESTSTATUS_HARVESTING FeedHarvestStatus = 1
+	FEEDHARVESTSTATUS_ERROR      FeedHarvestStatus = 2
+)
+
+// --------------------------------------
+
+// The interface that all content source drivers must implement.
 type IDriver interface {
 	// Scrapes and persists posts from the website. (Run periodically by the mainloop)
 	Harvest() error
@@ -25,22 +49,3 @@ type SourceConfigId string
 type ISourceConfig interface {
 	GetSourceConfigId() SourceConfigId
 }
-
-// --------------------------------------
-
-// Feed is a data object returned by a Driver to describe a feed.
-// It's used by the HTTP server to construct links to a specific feed.
-type Feed struct {
-	Name              string
-	Description       string
-	Status            FeedStatus
-	TimeLastHarvested int64
-}
-
-type FeedStatus int
-
-const (
-	FEEDSTATUS_IDLE       FeedStatus = 0
-	FEEDSTATUS_HARVESTING FeedStatus = 1
-	FEEDSTATUS_ERROR      FeedStatus = 2
-)

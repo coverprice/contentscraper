@@ -1,5 +1,8 @@
 package server
 
+// This handles the top-level page in the web server. It displays a list of Feeds and their current
+// status, and allows the users to navigate to them.
+
 import (
 	"fmt"
 	"github.com/coverprice/contentscraper/drivers"
@@ -87,14 +90,17 @@ type driverFeed struct {
 	StatusText string
 }
 
+// ServeHTTP is a handler called by the mux multiplexer, configured to respond to the "/" URL pattern.
 func (this indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// The "/" pattern matches everything, so we need to check
-	// that we're at the root here.
+	// The "/" URL pattern matches every URL that isn't explicitly handled, so this handler
+	// will be invoked on any unknown URL. That's why we check that we're at the URL that
+	// we expect only "/".
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
 
+	// Retrieve all Feeds from all Drivers, and sort them for display.
 	var allfeeds []driverFeed
 	for _, driver := range this.server.Drivers {
 		var baseUrl = strings.TrimRight(driver.GetBaseUrlPath(), "/")
@@ -123,6 +129,7 @@ func (this indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	htmlutil.RenderTemplate(w, indexTempl, data)
 }
 
+// ByFeedName is a type that has methods used for sorting.
 type ByFeedName []driverFeed
 
 func (a ByFeedName) Len() int      { return len(a) }
@@ -133,15 +140,15 @@ func (a ByFeedName) Less(i, j int) bool {
 
 func getStatusText(feed drivers.Feed) string {
 	switch feed.Status {
-	case drivers.FEEDSTATUS_IDLE:
+	case drivers.FEEDHARVESTSTATUS_IDLE:
 		if feed.TimeLastHarvested == 0 {
 			return "Not harvested yet"
 		}
 		duration := time.Now().Sub(time.Unix(feed.TimeLastHarvested, 0))
 		return fmt.Sprintf("%02d:%02d ago", int(math.Floor(duration.Hours())), int(math.Floor(duration.Minutes()))%60)
-	case drivers.FEEDSTATUS_ERROR:
+	case drivers.FEEDHARVESTSTATUS_ERROR:
 		return "Error"
-	case drivers.FEEDSTATUS_HARVESTING:
+	case drivers.FEEDHARVESTSTATUS_HARVESTING:
 		return "Harvesting"
 	default:
 		log.Errorf("Unsupported status: %v", feed.Status)

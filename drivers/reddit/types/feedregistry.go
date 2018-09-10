@@ -8,18 +8,20 @@ import (
 
 type FeedRegistryItem struct {
 	config.RedditFeed
-	Status            drivers.FeedStatus
+	Status            drivers.FeedHarvestStatus
 	TimeLastHarvested int64
 }
 
 type TFeedRegistry map[string]*FeedRegistryItem
 
+// The FeedRegistry is a simple map (with some functions to assist with adding/retrieving)
+// that maps a Feed name to the Reddit configuration.
 var FeedRegistry = make(TFeedRegistry)
 
 func (this *TFeedRegistry) AddItem(feed *config.RedditFeed) {
 	fri := FeedRegistryItem{
 		RedditFeed:        *feed,
-		Status:            drivers.FEEDSTATUS_IDLE,
+		Status:            drivers.FEEDHARVESTSTATUS_IDLE,
 		TimeLastHarvested: 0,
 	}
 
