@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-// --------------------------------------
-
 // Harvester controls the process of scraping posts from Reddit sources
 // and persisting them.
 // It uses a Scraper client to pull posts from a specific source,
@@ -47,10 +45,7 @@ func (this *Harvester) Harvest() (err error) {
 
 	NextSubreddit:
 		for _, subreddit := range feed.RedditFeed.Subreddits {
-			source := types.SubredditSourceConfig{
-				Subreddit: subreddit.Name,
-			}
-			if err = this.pullSource(source); err != nil {
+			if err = this.pullSource(subreddit.Name); err != nil {
 				feed.Status = drivers.FEEDHARVESTSTATUS_ERROR
 				continue NextSubreddit
 			}
@@ -62,11 +57,11 @@ func (this *Harvester) Harvest() (err error) {
 	return
 }
 
-func (this *Harvester) pullSource(sourceConfig types.SubredditSourceConfig) (err error) {
-	log.Infof("Pulling from source '%s'", sourceConfig.Subreddit)
+func (this *Harvester) pullSource(subredditName string) (err error) {
+	log.Infof("Pulling from source '%s'", subredditName)
 	var now = int64(time.Now().Unix())
 
-	var context = scrape.NewContextForHot(sourceConfig.Subreddit)
+	var context = scrape.NewContextForHot(subredditName)
 	numPagesScraped := 0
 	for {
 		var posts []types.RedditPost
@@ -74,7 +69,7 @@ func (this *Harvester) pullSource(sourceConfig types.SubredditSourceConfig) (err
 		if err != nil {
 			return
 		}
-		log.Debugf("Pulled %d posts from source '%s'", len(posts), sourceConfig.Subreddit)
+		log.Debugf("Pulled %d posts from source '%s'", len(posts), subredditName)
 		numPagesScraped++
 
 		numNewPosts := 0

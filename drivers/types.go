@@ -12,8 +12,8 @@ type Feed struct {
 	Name              string
 	Description       string
 	Status            FeedHarvestStatus
-	// The epoch time (in seconds) that this Feed was last harvested for content.
-	// 0 means it was never harvested.
+	// The epoch time (in seconds) that this Feed was last harvested for content
+	// by the current process. 0 means it was never harvested.
 	TimeLastHarvested int64
 }
 
@@ -38,16 +38,4 @@ type IDriver interface {
 	GetFeeds() []Feed
 	// A method used to render a page for a specific Feed. The handler will be
 	GetHttpHandler() http.Handler
-}
-
-// --------------------------------------
-
-// A string that uniquely identifies a SourceConfig. Used to store
-// its "LastRun" data. E.g. "reddit/r/some_subreddit" or "twitter"
-type SourceConfigId string
-
-// ISourceConfig describes a data source to the backend, which may have extra details
-// about a sub-stream, e.g. a specific sub-reddit.
-type ISourceConfig interface {
-	GetSourceConfigId() SourceConfigId
 }

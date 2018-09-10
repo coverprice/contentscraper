@@ -1,10 +1,5 @@
 package types
 
-import (
-	"fmt"
-	"github.com/coverprice/contentscraper/drivers"
-)
-
 type RedditPost struct {
 	Id            string
 	Name          string // Note that this more of an ID, used in the "after" parameter of the scraper
@@ -18,15 +13,4 @@ type RedditPost struct {
 	Url           string
 	SubredditName string `mapstructure:"subreddit_name"`
 	SubredditId   string `mapstructure:"subreddit_id"`
-}
-
-// Compile time interface check
-var _ drivers.ISourceConfig = &SubredditSourceConfig{}
-
-type SubredditSourceConfig struct {
-	Subreddit string
-}
-
-func (this *SubredditSourceConfig) GetSourceConfigId() drivers.SourceConfigId {
-	return drivers.SourceConfigId(fmt.Sprintf("reddit:%s", this.Subreddit))
 }
