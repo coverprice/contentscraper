@@ -1,5 +1,7 @@
 package reddit
 
+// Implements the IDriver interface for the Reddit content source type
+
 import (
 	"database/sql"
 	"github.com/coverprice/contentscraper/config"
@@ -27,6 +29,7 @@ func NewRedditDriver(
 	viewerDbconn *sql.DB,		// DB connection used to retrieve harvested content
 	conf *config.Config,
 ) (driver *RedditDriver, err error) {
+	// Setup harvester
 	var scraper *scrape.Scraper
 	if scraper, err = scrape.NewScraperFromConfig(conf); err != nil {
 		return
@@ -46,6 +49,7 @@ func NewRedditDriver(
 		return
 	}
 
+	// Setup Feed viewer
 	var persistenceViewer *persist.Persistence
 	if persistenceViewer, err = persist.NewPersistence(viewerDbconn); err != nil {
 		return
@@ -53,6 +57,7 @@ func NewRedditDriver(
 	htmlViewerRequestHandler := server.NewHtmlViewerRequestHandler(persistenceViewer)
 	httpHandler := server.NewHttpHandler(htmlViewerRequestHandler)
 
+	// Configure Feeds to view
 	for _, feed := range conf.Reddit.Feeds {
 		types.FeedRegistry.AddItem(&feed)
 	}
