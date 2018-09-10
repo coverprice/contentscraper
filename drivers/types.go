@@ -34,7 +34,9 @@ type IDriver interface {
 
 	// Return the path that the driver's publishing handler will handle, e.g. "/reddit/"
 	GetBaseUrlPath() string
+	// Return a list of Feeds handled by this driver.
 	GetFeeds() []Feed
+	// A method used to render a page for a specific Feed. The handler will be
 	GetHttpHandler() http.Handler
 }
 

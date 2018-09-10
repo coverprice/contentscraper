@@ -23,8 +23,8 @@ type RedditDriver struct {
 }
 
 func NewRedditDriver(
-	harvesterDbconn *sql.DB,
-	viewerDbconn *sql.DB,
+	harvesterDbconn *sql.DB,	// DB connection used to store harvested content
+	viewerDbconn *sql.DB,		// DB connection used to retrieve harvested content
 	conf *config.Config,
 ) (driver *RedditDriver, err error) {
 	var scraper *scrape.Scraper
@@ -68,7 +68,16 @@ func (this *RedditDriver) GetBaseUrlPath() string {
 }
 
 func (this *RedditDriver) GetFeeds() []drivers.Feed {
-	return this.httpHandler.GetFeedsForServer()
+	var ret []drivers.Feed{}
+	for _, feedregistryitem := range types.FeedRegistry.GetAllItems() {
+		ret = append(ret, drivers.Feed{
+			Name:              feedregistryitem.RedditFeed.Name,
+			Description:       feedregistryitem.RedditFeed.Description,
+			Status:            feedregistryitem.Status,
+			TimeLastHarvested: feedregistryitem.TimeLastHarvested,
+		})
+	}
+	return ret
 }
 
 func (this *RedditDriver) GetHttpHandler() http.Handler {

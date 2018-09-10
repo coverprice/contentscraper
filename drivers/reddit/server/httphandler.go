@@ -1,7 +1,6 @@
 package server
 
 import (
-	"github.com/coverprice/contentscraper/drivers"
 	"github.com/coverprice/contentscraper/drivers/reddit/types"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -13,7 +12,7 @@ import (
 var _ http.Handler = &HttpHandler{}
 
 // HttpHandler is attached to the standard "http" server, bound to a base URL.
-// It knows the base URL and understands Http. It parses the URL and delegates
+// It knows the base URL and understands HTTP. It parses the URL and delegates
 // the response to the HtmlViewerRequestHandler.
 type HttpHandler struct {
 	requestHandler IRequestHandler
@@ -24,18 +23,6 @@ func NewHttpHandler(requestHandler IRequestHandler) *HttpHandler {
 		requestHandler: requestHandler,
 	}
 	return &handler
-}
-
-func (this *HttpHandler) GetFeedsForServer() (ret []drivers.Feed) {
-	for _, feedregistryitem := range types.FeedRegistry.GetAllItems() {
-		ret = append(ret, drivers.Feed{
-			Name:              feedregistryitem.RedditFeed.Name,
-			Description:       feedregistryitem.RedditFeed.Description,
-			Status:            feedregistryitem.Status,
-			TimeLastHarvested: feedregistryitem.TimeLastHarvested,
-		})
-	}
-	return ret
 }
 
 func (this HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
