@@ -112,7 +112,7 @@ func (this indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
-	sort.Sort(ByFeedName(allfeeds))
+	sort.Sort(byFeedName(allfeeds))
 
 	data := struct {
 		Title string
@@ -130,11 +130,11 @@ func (this indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // ByFeedName is a type that has methods used for sorting.
-type ByFeedName []driverFeed
+type byFeedName []driverFeed
 
-func (a ByFeedName) Len() int      { return len(a) }
-func (a ByFeedName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a ByFeedName) Less(i, j int) bool {
+func (a byFeedName) Len() int      { return len(a) }
+func (a byFeedName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a byFeedName) Less(i, j int) bool {
 	return a[i].Feed.Name < a[j].Feed.Name
 }
 
