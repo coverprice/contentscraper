@@ -126,11 +126,11 @@ func (a ByFeedAgeScore) Less(i, j int) bool {
 	}
 }
 
-type ByTimeStoredId []annotatedPost
+type byTimeStoredId []annotatedPost
 
-func (a ByTimeStoredId) Len() int      { return len(a) }
-func (a ByTimeStoredId) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a ByTimeStoredId) Less(i, j int) bool {
+func (a byTimeStoredId) Len() int      { return len(a) }
+func (a byTimeStoredId) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a byTimeStoredId) Less(i, j int) bool {
 	if a[i].TimeStored == a[j].TimeStored {
 		// Id ASC
 		return a[i].Id < a[j].Id
@@ -140,7 +140,7 @@ func (a ByTimeStoredId) Less(i, j int) bool {
 	}
 }
 func sortPostsIntoDisplayOrder(posts []annotatedPost) {
-	sort.Sort(ByTimeStoredId(posts))
+	sort.Sort(byTimeStoredId(posts))
 }
 
 func filterOutEmptyImages(posts []annotatedPost) (results []annotatedPost) {
