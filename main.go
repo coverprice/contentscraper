@@ -46,6 +46,9 @@ func init() {
 func initialize() (err error) {
 	flag.Parse()
 
+	// TODO: a chicken-egg situation exists where the config module defines the storage directory,
+	// but logs need to be configured before that. Really, the modules should be totally independent.
+	// So to fix this, the logFilename should be used as-is if it's not absolute.
 	if logFilename != "" && !path.IsAbs(logFilename) {
 		logFilename = filepath.Join(config.StorageDir(), logFilename)
 	}
@@ -56,7 +59,6 @@ func initialize() (err error) {
 		return fmt.Errorf("Could not load/parse config file: %v", err)
 	}
 
-	log.Debug("Initializing database.")
 	database.SetConfig(conf.BackendStorePath)
 
 	// Init RedditDriver
@@ -64,10 +66,10 @@ func initialize() (err error) {
 	var dbconn1, dbconn2 *sql.DB
 	var redditDriver *reddit.RedditDriver
 	if dbconn1, err = database.NewConnection(); err != nil {
-		return fmt.Errorf("Could not create DB connection [2]: %v", err)
+		return fmt.Errorf("Could not create DB connection [1]: %v", err)
 	}
 	if dbconn2, err = database.NewConnection(); err != nil {
-		return fmt.Errorf("Could not create DB connection [3]: %v", err)
+		return fmt.Errorf("Could not create DB connection [2]: %v", err)
 	}
 	if redditDriver, err = reddit.NewRedditDriver(dbconn1, dbconn2, conf); err != nil {
 		return fmt.Errorf("Could not initialize RedditDriver: %v", err)
@@ -106,6 +108,12 @@ func beginHarvest() {
 
 func harvestLoop(quit chan bool) {
 	defer waitgroup.Done()
+
+	// The time.NewTimer provides a mechanism for running periodic function calls.
+	// When the timer alarm goes off, it sends an arbitrary value to the channel
+	// it created when it was initialized. Doing a select{} on this channel allows
+	// us to wait for the alarm. When the alarm goes off, it's necessary to stop
+	// and reset the timer.
 	var timeout = time.NewTimer(time.Duration(harvestInterval) * time.Minute)
 	timeout.Stop()
 	defer timeout.Stop()
