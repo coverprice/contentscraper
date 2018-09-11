@@ -33,7 +33,7 @@ var baseTemplateStr = `
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
     {{block "style" .}} {{end}}
-	<title>{{block "title" .}}[Default title]{{end}}</title>
+    <title>{{block "title" .}}[Default title]{{end}}</title>
   </head>
   <body>
     {{block "breadcrumb" .}}
@@ -46,7 +46,7 @@ var baseTemplateStr = `
         {{end}}
     {{end}}
 
-	{{block "content" .}}{{end}}
+    {{block "content" .}}{{end}}
 
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
@@ -58,6 +58,8 @@ var baseTemplateStr = `
 </html>
 `
 
+// Given an arbitrary value, determines if it's a Struct (or a pointer to a Struct), and returns
+// whether that Struct has a field with the given name.
 func hasField(v interface{}, name string) bool {
 	rv := reflect.ValueOf(v)
 	if rv.Kind() == reflect.Ptr {
@@ -69,10 +71,12 @@ func hasField(v interface{}, name string) bool {
 	return rv.FieldByName(name).IsValid()
 }
 
+// Returns whether the given string ends with the given suffix
 func hasSuffix(s, suffix string) bool {
 	return strings.HasSuffix(s, suffix)
 }
 
+// Allows the above functions to be called from within the template.
 var (
 	baseTemplate = template.Must(
 		template.New("base").Funcs(
