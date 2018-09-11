@@ -143,8 +143,8 @@ func TestConfigParsing(t *testing.T) {
 		BackendStorePath: filepath.Join(storageDir, databaseFileName),
 	}
 
-	var conf *Config;
-	var err error;
+	var conf *Config
+	var err error
 	if conf, err = parseFromString(testConfig); err != nil {
 		t.Error(fmt.Errorf("Could not parse fake config file: %v", err))
 	}

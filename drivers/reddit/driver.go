@@ -25,8 +25,8 @@ type RedditDriver struct {
 }
 
 func NewRedditDriver(
-	harvesterDbconn *sql.DB,	// DB connection used to store harvested content
-	viewerDbconn *sql.DB,		// DB connection used to retrieve harvested content
+	harvesterDbconn *sql.DB, // DB connection used to store harvested content
+	viewerDbconn *sql.DB, // DB connection used to retrieve harvested content
 	conf *config.Config,
 ) (driver *RedditDriver, err error) {
 	// Setup harvester

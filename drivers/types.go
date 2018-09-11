@@ -9,9 +9,9 @@ import (
 // Feed might include posts from /r/funny and /r/gifs.
 // It's used by the UI to allow the user to select a feed and explore the posts within.
 type Feed struct {
-	Name              string
-	Description       string
-	Status            FeedHarvestStatus
+	Name        string
+	Description string
+	Status      FeedHarvestStatus
 	// The epoch time (in seconds) that this Feed was last harvested for content
 	// by the current process. 0 means it was never harvested.
 	TimeLastHarvested int64
