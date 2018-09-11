@@ -5,6 +5,8 @@ import (
 	"github.com/coverprice/contentscraper/drivers"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"os"
+	"path/filepath"
 )
 
 // The web server that displays the content scraped by the harvesting drivers.
@@ -24,6 +26,16 @@ func NewServer(port int) *Server {
 		mux: mux,
 	}
 	mux.Handle("/", indexHandler{server: &s})
+
+	// Add the static directory so Javascript can be served
+	prefix := "/static/"
+	exec_path, err := os.Executable()
+	if err != nil {
+		log.Fatal("Could not detect directory of executable", err)
+	}
+	static_dir := filepath.Join(filepath.Dir(exec_path), prefix)
+	mux.Handle(prefix, http.StripPrefix(prefix, http.FileServer(http.Dir(static_dir))))
+
 	return &s
 }
 
